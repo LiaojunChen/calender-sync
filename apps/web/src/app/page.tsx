@@ -3,8 +3,8 @@
 import React, { useEffect, useCallback } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import { getSupabaseClient } from '@/lib/supabase';
-import { getSession, getCalendars, onAuthStateChange } from '@project-calendar/shared';
-import type { Calendar } from '@project-calendar/shared';
+import { getSession, getCalendars, onAuthStateChange, getUserSettings } from '@project-calendar/shared';
+import type { Calendar, UserSettings } from '@project-calendar/shared';
 import TopBar from '@/components/layout/TopBar';
 import Sidebar from '@/components/layout/Sidebar';
 import MainArea from '@/components/layout/MainArea';
@@ -62,6 +62,15 @@ function CalendarApp() {
             calendars: result.data as unknown as Calendar[],
           });
         }
+
+        // Load user settings
+        const settingsResult = await getUserSettings(client);
+        if (settingsResult.data) {
+          dispatch({
+            type: 'SET_USER_SETTINGS',
+            userSettings: settingsResult.data as unknown as UserSettings,
+          });
+        }
       }
     } catch (err) {
       console.error('Failed to initialize app:', err);
@@ -95,6 +104,15 @@ function CalendarApp() {
             calendars: result.data as unknown as Calendar[],
           });
         }
+
+        // Load user settings
+        const settingsResult = await getUserSettings(client);
+        if (settingsResult.data) {
+          dispatch({
+            type: 'SET_USER_SETTINGS',
+            userSettings: settingsResult.data as unknown as UserSettings,
+          });
+        }
       } else if (event === 'SIGNED_OUT') {
         dispatch({
           type: 'SET_AUTHENTICATED',
@@ -102,6 +120,7 @@ function CalendarApp() {
           userId: null,
         });
         dispatch({ type: 'SET_CALENDARS', calendars: [] });
+        dispatch({ type: 'SET_USER_SETTINGS', userSettings: null });
       }
     });
 

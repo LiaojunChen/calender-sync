@@ -8,7 +8,7 @@ import React, {
   useMemo,
   useReducer,
 } from 'react';
-import type { Calendar, Event, Todo } from '@project-calendar/shared';
+import type { Calendar, Event, Todo, UserSettings } from '@project-calendar/shared';
 
 // ============================================================
 // Types
@@ -16,6 +16,14 @@ import type { Calendar, Event, Todo } from '@project-calendar/shared';
 
 export type ViewType = 'day' | 'week' | 'month' | 'agenda';
 export type ThemeMode = 'light' | 'dark' | 'system';
+
+export const DEFAULT_USER_SETTINGS: Omit<UserSettings, 'id' | 'user_id' | 'updated_at'> = {
+  default_view: 'week',
+  week_start_day: 'monday',
+  default_reminder_offsets: [10, 1440],
+  default_event_duration: 60,
+  theme: 'system',
+};
 
 export interface AppState {
   /** Currently selected view */
@@ -42,6 +50,10 @@ export interface AppState {
   isLoading: boolean;
   /** User ID if authenticated */
   userId: string | null;
+  /** User settings (null before loaded) */
+  userSettings: UserSettings | null;
+  /** Search query string */
+  searchQuery: string;
 }
 
 type AppAction =
@@ -67,7 +79,9 @@ type AppAction =
   | { type: 'SET_THEME'; theme: ThemeMode }
   | { type: 'SET_RESOLVED_THEME'; resolvedTheme: 'light' | 'dark' }
   | { type: 'SET_AUTHENTICATED'; isAuthenticated: boolean; userId: string | null }
-  | { type: 'SET_LOADING'; isLoading: boolean };
+  | { type: 'SET_LOADING'; isLoading: boolean }
+  | { type: 'SET_USER_SETTINGS'; userSettings: UserSettings | null }
+  | { type: 'SET_SEARCH_QUERY'; query: string };
 
 export interface AppContextValue {
   state: AppState;
@@ -80,6 +94,7 @@ export interface AppContextValue {
   navigateToday: () => void;
   navigatePrev: () => void;
   navigateNext: () => void;
+  setSearchQuery: (query: string) => void;
 }
 
 // ============================================================
@@ -99,6 +114,8 @@ const initialState: AppState = {
   isAuthenticated: false,
   isLoading: true,
   userId: null,
+  userSettings: null,
+  searchQuery: '',
 };
 
 // ============================================================
@@ -198,6 +215,10 @@ function appReducer(state: AppState, action: AppAction): AppState {
       };
     case 'SET_LOADING':
       return { ...state, isLoading: action.isLoading };
+    case 'SET_USER_SETTINGS':
+      return { ...state, userSettings: action.userSettings };
+    case 'SET_SEARCH_QUERY':
+      return { ...state, searchQuery: action.query };
     default:
       return state;
   }
@@ -290,6 +311,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     []
   );
 
+  const setSearchQuery = useCallback(
+    (query: string) => dispatch({ type: 'SET_SEARCH_QUERY', query }),
+    []
+  );
+
   const navigateToday = useCallback(
     () => dispatch({ type: 'SET_DATE', date: new Date() }),
     []
@@ -350,8 +376,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       navigateToday,
       navigatePrev,
       navigateNext,
+      setSearchQuery,
     }),
-    [state, setView, setDate, toggleSidebar, setTheme, navigateToday, navigatePrev, navigateNext]
+    [state, setView, setDate, toggleSidebar, setTheme, navigateToday, navigatePrev, navigateNext, setSearchQuery]
   );
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

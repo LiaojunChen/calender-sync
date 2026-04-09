@@ -224,6 +224,27 @@ function CustomDrawerContent(
 // Navigator
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Header component with access to root navigator
+// ---------------------------------------------------------------------------
+
+function DrawerHeader({ navigation }: { navigation: { openDrawer: () => void } }): React.JSX.Element {
+  const rootNav = useNavigation<StackNavigationProp<RootStackParamList>>();
+  return (
+    <TopBar
+      onMenuPress={() => navigation.openDrawer()}
+      onSearchPress={() => rootNav.navigate('Search')}
+      onTodayPress={() => {
+        // Handled by CalendarScreen
+      }}
+    />
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Navigator
+// ---------------------------------------------------------------------------
+
 const Drawer = createDrawerNavigator<DrawerParamList>();
 
 export default function DrawerNavigator(): React.JSX.Element {
@@ -234,14 +255,7 @@ export default function DrawerNavigator(): React.JSX.Element {
       drawerContent={(props) => <CustomDrawerContent {...props} />}
       screenOptions={({ navigation }) => ({
         headerShown: true,
-        header: () => (
-          <TopBar
-            onMenuPress={() => navigation.openDrawer()}
-            onTodayPress={() => {
-              // Handled by CalendarScreen in Task 10
-            }}
-          />
-        ),
+        header: () => <DrawerHeader navigation={navigation} />,
         drawerStyle: {
           backgroundColor: colors.background,
           width: 280,

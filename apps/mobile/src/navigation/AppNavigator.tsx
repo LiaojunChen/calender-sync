@@ -24,6 +24,7 @@ import EventFormScreen from '../screens/EventFormScreen';
 import TodoFormScreen from '../screens/TodoFormScreen';
 import EventDetailScreen from '../screens/EventDetailScreen';
 import SettingsScreen from '../screens/SettingsScreen';
+import SearchScreen from '../screens/SearchScreen';
 
 // ---------------------------------------------------------------------------
 // Param lists
@@ -35,6 +36,7 @@ export type RootStackParamList = {
   EventDetail: { eventId: string };
   TodoForm: { todoId?: string } | undefined;
   Settings: undefined;
+  Search: undefined;
 };
 
 export type BottomTabParamList = {
@@ -140,6 +142,13 @@ export default function AppNavigator(): React.JSX.Element {
           title: '设置',
           headerStyle: { backgroundColor: colors.card },
           headerTintColor: colors.text,
+        }}
+      />
+      <Stack.Screen
+        name="Search"
+        component={SearchScreen}
+        options={{
+          headerShown: false,
         }}
       />
     </Stack.Navigator>

@@ -1,8 +1,10 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
-import { formatDateRangeCN, formatDateCN, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from '@project-calendar/shared';
-import { useAppContext, type ViewType, type ThemeMode } from '@/contexts/AppContext';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { formatDateRangeCN, formatDateCN, startOfWeek, endOfWeek } from '@project-calendar/shared';
+import { useAppContext, type ViewType } from '@/contexts/AppContext';
+import SearchPanel from '@/components/search/SearchPanel';
+import SettingsPanel from '@/components/settings/SettingsPanel';
 import styles from './TopBar.module.css';
 
 const VIEW_LABELS: Record<ViewType, string> = {
@@ -12,18 +14,26 @@ const VIEW_LABELS: Record<ViewType, string> = {
   agenda: '议程',
 };
 
-const THEME_LABELS: Record<ThemeMode, string> = {
-  light: '浅色',
-  dark: '深色',
-  system: '系统',
-};
-
 export default function TopBar() {
-  const { state, setView, toggleSidebar, navigateToday, navigatePrev, navigateNext, setTheme } =
+  const { state, setView, toggleSidebar, navigateToday, navigatePrev, navigateNext, setSearchQuery } =
     useAppContext();
-  const [searchValue, setSearchValue] = useState('');
+  const [searchOpen, setSearchOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const settingsRef = useRef<HTMLDivElement>(null);
+
+  const handleSearchChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const val = e.target.value;
+      setSearchQuery(val);
+      setSearchOpen(val.trim().length > 0);
+    },
+    [setSearchQuery]
+  );
+
+  const handleSearchClose = useCallback(() => {
+    setSearchOpen(false);
+    setSearchQuery('');
+  }, [setSearchQuery]);
 
   // Close settings dropdown on outside click
   useEffect(() => {
@@ -108,10 +118,12 @@ export default function TopBar() {
           className={styles.searchInput}
           type="text"
           placeholder="搜索"
-          value={searchValue}
-          onChange={(e) => setSearchValue(e.target.value)}
+          value={state.searchQuery}
+          onChange={handleSearchChange}
+          onFocus={() => { if (state.searchQuery.trim()) setSearchOpen(true); }}
         />
       </div>
+      {searchOpen && <SearchPanel onClose={handleSearchClose} />}
 
       {/* View switcher */}
       <select
@@ -138,25 +150,10 @@ export default function TopBar() {
               <path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.07.62-.07.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z" />
             </svg>
           </button>
-
-          {settingsOpen && (
-            <div className={styles.settingsDropdown}>
-              <div className={styles.settingsDropdownLabel}>主题</div>
-              <div className={styles.themeOptions}>
-                {(Object.keys(THEME_LABELS) as ThemeMode[]).map((t) => (
-                  <button
-                    key={t}
-                    className={`${styles.themeOption} ${state.theme === t ? styles.themeOptionActive : ''}`}
-                    onClick={() => setTheme(t)}
-                  >
-                    {THEME_LABELS[t]}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
       </div>
+
+      {settingsOpen && <SettingsPanel onClose={() => setSettingsOpen(false)} />}
     </header>
   );
 }
