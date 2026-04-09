@@ -1,9 +1,10 @@
-import type { Metadata } from "next";
-import "./globals.css";
+import type { Metadata } from 'next';
+import { AppProvider } from '@/contexts/AppContext';
+import './globals.css';
 
 export const metadata: Metadata = {
-  title: "Project Calendar",
-  description: "跨端日程待办管理系统",
+  title: 'Project Calendar',
+  description: '跨端日程待办管理系统',
 };
 
 export default function RootLayout({
@@ -12,8 +13,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="zh-CN">
-      <body>{children}</body>
+    <html lang="zh-CN" suppressHydrationWarning>
+      <body>
+        <AppProvider>{children}</AppProvider>
+      </body>
     </html>
   );
 }

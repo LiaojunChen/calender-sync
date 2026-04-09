@@ -1,31 +1,139 @@
-import type { User, WidgetItem } from "@project-calendar/shared";
-import { formatDateCN } from "@project-calendar/shared";
+'use client';
 
-export default function Home() {
-  const today = formatDateCN(new Date());
+import React, { useEffect, useCallback } from 'react';
+import { useAppContext } from '@/contexts/AppContext';
+import { getSupabaseClient } from '@/lib/supabase';
+import { getSession, getCalendars, onAuthStateChange } from '@project-calendar/shared';
+import type { Calendar } from '@project-calendar/shared';
+import TopBar from '@/components/layout/TopBar';
+import Sidebar from '@/components/layout/Sidebar';
+import MainArea from '@/components/layout/MainArea';
+import LoginForm from '@/components/auth/LoginForm';
 
-  // Demonstrate that shared types are accessible
-  const _exampleUser: Pick<User, "email" | "display_name"> = {
-    email: "test@example.com",
-    display_name: "Test User",
-  };
+const pageStyles = {
+  wrapper: {
+    display: 'flex',
+    flexDirection: 'column' as const,
+    height: '100vh',
+    overflow: 'hidden',
+  },
+  body: {
+    display: 'flex',
+    flex: 1,
+    overflow: 'hidden',
+  },
+  loading: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: '100vh',
+    color: 'var(--text-tertiary)',
+    fontSize: '16px',
+  },
+};
 
-  const _exampleWidget: WidgetItem = {
-    id: "1",
-    type: "event",
-    title: "Example Event",
-    timeText: "09:00 - 10:00",
-    color: "#4285f4",
-    isCompleted: false,
-  };
+function CalendarApp() {
+  const { state, dispatch } = useAppContext();
 
+  // Initialize auth and fetch calendars
+  const initializeApp = useCallback(async () => {
+    const client = getSupabaseClient();
+
+    if (!client) {
+      // No Supabase configured - remain on login page but stop loading
+      dispatch({ type: 'SET_LOADING', isLoading: false });
+      return;
+    }
+
+    try {
+      const { session } = await getSession(client);
+      if (session?.user) {
+        dispatch({
+          type: 'SET_AUTHENTICATED',
+          isAuthenticated: true,
+          userId: session.user.id,
+        });
+
+        // Fetch calendars
+        const result = await getCalendars(client);
+        if (result.data) {
+          dispatch({
+            type: 'SET_CALENDARS',
+            calendars: result.data as unknown as Calendar[],
+          });
+        }
+      }
+    } catch (err) {
+      console.error('Failed to initialize app:', err);
+    } finally {
+      dispatch({ type: 'SET_LOADING', isLoading: false });
+    }
+  }, [dispatch]);
+
+  useEffect(() => {
+    initializeApp();
+  }, [initializeApp]);
+
+  // Listen for auth state changes
+  useEffect(() => {
+    const client = getSupabaseClient();
+    if (!client) return;
+
+    const { unsubscribe } = onAuthStateChange(client, async (event, session) => {
+      if (event === 'SIGNED_IN' && session?.user) {
+        dispatch({
+          type: 'SET_AUTHENTICATED',
+          isAuthenticated: true,
+          userId: session.user.id,
+        });
+
+        // Fetch calendars on sign in
+        const result = await getCalendars(client);
+        if (result.data) {
+          dispatch({
+            type: 'SET_CALENDARS',
+            calendars: result.data as unknown as Calendar[],
+          });
+        }
+      } else if (event === 'SIGNED_OUT') {
+        dispatch({
+          type: 'SET_AUTHENTICATED',
+          isAuthenticated: false,
+          userId: null,
+        });
+        dispatch({ type: 'SET_CALENDARS', calendars: [] });
+      }
+    });
+
+    return () => unsubscribe();
+  }, [dispatch]);
+
+  // Loading state
+  if (state.isLoading) {
+    return (
+      <div style={pageStyles.loading}>
+        加载中...
+      </div>
+    );
+  }
+
+  // Not authenticated — show login
+  if (!state.isAuthenticated) {
+    return <LoginForm />;
+  }
+
+  // Authenticated — show calendar layout
   return (
-    <div style={{ padding: "2rem", fontFamily: "system-ui, sans-serif" }}>
-      <h1>Project Calendar - Web</h1>
-      <p>Today: {today}</p>
-      <p style={{ color: "#666" }}>
-        Monorepo setup complete. Shared types imported successfully.
-      </p>
+    <div style={pageStyles.wrapper}>
+      <TopBar />
+      <div style={pageStyles.body}>
+        <Sidebar />
+        <MainArea />
+      </div>
     </div>
   );
+}
+
+export default function Home() {
+  return <CalendarApp />;
 }
