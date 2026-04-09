@@ -13,6 +13,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import NetInfo, { type NetInfoState } from '@react-native-community/netinfo';
+import { detectReconnect } from '@project-calendar/shared';
 
 export interface NetworkSyncResult {
   /** Whether the device currently has network connectivity */
@@ -46,8 +47,8 @@ export function useNetworkSync(
 
       setIsConnected(connected);
 
-      // Trigger sync on reconnect (offline → online transition)
-      if (connected && prevConnectedRef.current === false) {
+      // Trigger sync on reconnect (offline/unknown → online transition)
+      if (detectReconnect({ isConnected: prevConnectedRef.current }, { isConnected: connected })) {
         onReconnectRef.current();
       }
 

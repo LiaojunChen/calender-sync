@@ -10,3 +10,4 @@ export * from './recurrence';
 export * from './notificationUtils';
 export * from './searchUtils';
 export * from './sync';
+export * from './networkUtils';
