@@ -4,6 +4,8 @@
   height: var(--topbar-height);
   padding: 0 16px;
   background: var(--bg-topbar);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   border-bottom: 1px solid var(--border-light);
   gap: 8px;
   position: sticky;
@@ -18,7 +20,7 @@
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  transition: background-color 0.15s;
+  transition: background-color var(--transition-fast), transform var(--transition-fast);
   flex-shrink: 0;
 }
 
@@ -28,15 +30,17 @@
 
 .iconButton:active {
   background: var(--bg-active);
+  transform: scale(0.97);
 }
 
 .logo {
-  font-size: 22px;
-  font-weight: 400;
+  font-size: 20px;
+  font-weight: 500;
   color: var(--text-secondary);
   margin-right: 16px;
   white-space: nowrap;
   user-select: none;
+  letter-spacing: -0.02em;
 }
 
 .logoAccent {
@@ -45,18 +49,25 @@
 
 .todayButton {
   padding: 0 16px;
-  height: 36px;
+  height: 34px;
   border: 1px solid var(--border-color);
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   font-size: 14px;
   font-weight: 500;
   color: var(--text-primary);
-  transition: background-color 0.15s, border-color 0.15s;
+  transition: background-color var(--transition-fast), border-color var(--transition-fast), transform var(--transition-fast);
   white-space: nowrap;
+  letter-spacing: -0.01em;
 }
 
 .todayButton:hover {
   background: var(--bg-hover);
+  border-color: var(--border-color);
+}
+
+.todayButton:active {
+  transform: scale(0.97);
+  background: var(--bg-active);
 }
 
 .navGroup {
@@ -66,12 +77,13 @@
 }
 
 .dateTitle {
-  font-size: 22px;
-  font-weight: 400;
+  font-size: 20px;
+  font-weight: 500;
   color: var(--text-primary);
   margin: 0 8px;
   white-space: nowrap;
   user-select: none;
+  letter-spacing: -0.02em;
 }
 
 .spacer {
@@ -89,18 +101,18 @@
   height: 36px;
   padding: 0 12px 0 36px;
   background: var(--bg-input);
-  border: none;
-  border-radius: 8px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
   color: var(--text-primary);
   outline: none;
-  transition: width 0.2s, box-shadow 0.15s;
+  transition: width var(--transition-base), box-shadow var(--transition-fast), border-color var(--transition-fast), background var(--transition-fast);
 }
 
 .searchInput:focus {
   width: 320px;
-  box-shadow: var(--shadow-sm);
-  background: var(--bg-primary);
-  border: 1px solid var(--border-color);
+  background: var(--bg-surface);
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
 }
 
 .searchInput::placeholder {
@@ -117,19 +129,25 @@
 }
 
 .viewSwitcher {
-  height: 36px;
+  height: 34px;
   padding: 0 12px;
   border: 1px solid var(--border-color);
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   background: var(--bg-primary);
   color: var(--text-primary);
   cursor: pointer;
   font-size: 14px;
   outline: none;
+  transition: background var(--transition-fast), border-color var(--transition-fast);
 }
 
 .viewSwitcher:hover {
   background: var(--bg-hover);
+}
+
+.viewSwitcher:focus {
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
 }
 
 .settingsArea {
@@ -147,14 +165,15 @@
   position: absolute;
   top: 100%;
   right: 0;
-  margin-top: 4px;
+  margin-top: 8px;
   min-width: 200px;
   background: var(--bg-modal);
   border: 1px solid var(--border-light);
-  border-radius: 8px;
-  box-shadow: var(--shadow-md);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
   padding: 8px 0;
   z-index: 200;
+  animation: modalEnter var(--transition-fast) both;
 }
 
 .settingsDropdownItem {
@@ -166,6 +185,7 @@
   font-size: 14px;
   color: var(--text-primary);
   text-align: left;
+  transition: background var(--transition-fast);
 }
 
 .settingsDropdownItem:hover {
@@ -173,11 +193,12 @@
 }
 
 .settingsDropdownLabel {
-  font-size: 12px;
+  font-size: 11px;
+  font-weight: 600;
   color: var(--text-tertiary);
   padding: 8px 16px 4px;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.08em;
 }
 
 .themeOptions {
@@ -188,20 +209,24 @@
 
 .themeOption {
   padding: 4px 10px;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   font-size: 12px;
   border: 1px solid var(--border-color);
   color: var(--text-secondary);
-  transition: all 0.15s;
+  transition: all var(--transition-fast);
 }
 
 .themeOption:hover {
   background: var(--bg-hover);
 }
 
+.themeOption:active {
+  transform: scale(0.97);
+}
+
 .themeOptionActive {
   background: var(--accent-primary);
-  color: var(--text-on-primary);
+  color: var(--text-on-accent);
   border-color: var(--accent-primary);
 }
 

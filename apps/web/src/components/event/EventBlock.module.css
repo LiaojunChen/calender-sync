@@ -1,24 +1,31 @@
 .eventBlock {
   position: absolute;
-  border-radius: 4px;
-  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  padding: 3px 7px;
   overflow: hidden;
   cursor: pointer;
   font-size: 12px;
   line-height: 1.3;
   z-index: 1;
-  border-left: 3px solid transparent;
-  transition: box-shadow 0.15s ease;
+  border-left: 3px solid var(--event-color, #4F46E5);
+  background: color-mix(in srgb, var(--event-color, #4F46E5) 15%, transparent);
+  transition: box-shadow var(--transition-fast), transform var(--transition-fast);
   box-sizing: border-box;
 }
 
 .eventBlock:hover {
+  transform: translateY(-1px);
   box-shadow: var(--shadow-md);
   z-index: 5;
 }
 
+.eventBlock:active {
+  transform: translateY(0) scale(0.98);
+}
+
 .title {
   font-weight: 500;
+  letter-spacing: -0.01em;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -26,7 +33,7 @@
 
 .time {
   font-size: 11px;
-  opacity: 0.9;
+  opacity: 0.75;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -34,7 +41,7 @@
 
 .location {
   font-size: 11px;
-  opacity: 0.8;
+  opacity: 0.7;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -42,7 +49,7 @@
 
 /* All-day variant: displayed in AllDayArea as a horizontal bar */
 .allDayBlock {
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   padding: 1px 8px;
   font-size: 12px;
   line-height: 1.6;
@@ -51,7 +58,13 @@
   overflow: hidden;
   text-overflow: ellipsis;
   font-weight: 500;
-  transition: box-shadow 0.15s ease;
+  letter-spacing: -0.01em;
+  transition: box-shadow var(--transition-fast), transform var(--transition-fast);
+}
+
+.allDayBlock:hover {
+  box-shadow: var(--shadow-sm);
+  transform: translateY(-1px);
 }
 
 /* Resize handle at the bottom of timed events */
@@ -62,13 +75,9 @@
   bottom: 0;
   height: 6px;
   cursor: s-resize;
-  border-radius: 0 0 4px 4px;
+  border-radius: 0 0 var(--radius-sm) var(--radius-sm);
 }
 
 .resizeHandle:hover {
-  background: rgba(0, 0, 0, 0.08);
-}
-
-.allDayBlock:hover {
-  box-shadow: var(--shadow-sm);
+  background: rgba(15, 23, 42, 0.08);
 }

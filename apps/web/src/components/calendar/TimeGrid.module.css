@@ -39,7 +39,8 @@
 .headerDayName {
   font-size: 11px;
   color: var(--text-tertiary);
-  font-weight: 500;
+  font-weight: 600;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 
@@ -57,12 +58,13 @@
   font-size: 16px;
   font-weight: 400;
   color: var(--text-primary);
+  transition: background var(--transition-fast);
 }
 
 .headerDateNumToday {
-  background-color: #1a73e8;
-  color: #ffffff;
-  font-weight: 500;
+  background-color: var(--today-bg);
+  color: var(--today-text);
+  font-weight: 600;
 }
 
 .scrollArea {
@@ -108,7 +110,7 @@
 }
 
 .dayColumnToday {
-  background-color: rgba(26, 115, 232, 0.05);
+  background-color: rgba(79, 70, 229, 0.04);
 }
 
 /* Hour lines (solid) */
@@ -117,7 +119,7 @@
   left: 0;
   right: 0;
   height: 0;
-  border-top: 1px solid #dadce0;
+  border-top: 1px solid rgba(15, 23, 42, 0.06);
 }
 
 /* Half-hour lines (dashed / lighter) */
@@ -126,7 +128,7 @@
   left: 0;
   right: 0;
   height: 0;
-  border-top: 1px dashed #f1f3f4;
+  border-top: 1px dashed rgba(15, 23, 42, 0.03);
 }
 
 /* Current time indicator */
@@ -135,7 +137,7 @@
   left: 0;
   right: 0;
   height: 0;
-  border-top: 2px solid #ea4335;
+  border-top: 2px solid #DC2626;
   z-index: 10;
   pointer-events: none;
 }
@@ -147,7 +149,7 @@
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  background-color: #ea4335;
+  background-color: #DC2626;
 }
 
 /* Ghost block for drag-to-create */
@@ -155,9 +157,9 @@
   position: absolute;
   left: 2px;
   right: 2px;
-  background-color: rgba(26, 115, 232, 0.25);
-  border: 1px dashed rgba(26, 115, 232, 0.6);
-  border-radius: 4px;
+  background-color: color-mix(in srgb, var(--accent-primary) 20%, transparent);
+  border: 1px dashed color-mix(in srgb, var(--accent-primary) 60%, transparent);
+  border-radius: var(--radius-sm);
   z-index: 8;
   pointer-events: none;
   display: flex;

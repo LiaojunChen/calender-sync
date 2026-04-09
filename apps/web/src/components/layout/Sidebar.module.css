@@ -7,7 +7,7 @@
   overflow-y: auto;
   overflow-x: hidden;
   padding: 16px 0;
-  transition: margin-left 0.2s ease, opacity 0.2s ease;
+  transition: margin-left var(--transition-base), opacity var(--transition-base);
 }
 
 .sidebarCollapsed {
@@ -23,21 +23,27 @@
   margin: 0 12px 16px;
   padding: 0 24px;
   height: 48px;
-  background: var(--bg-primary);
+  background: var(--bg-surface);
   border: 1px solid var(--border-color);
-  border-radius: 24px;
+  border-radius: var(--radius-full);
   box-shadow: var(--shadow-sm);
   font-size: 14px;
   font-weight: 500;
+  letter-spacing: -0.01em;
   color: var(--text-primary);
   cursor: pointer;
-  transition: box-shadow 0.2s, background 0.15s;
+  transition: box-shadow var(--transition-base), background var(--transition-fast), transform var(--transition-fast);
   white-space: nowrap;
 }
 
 .createButton:hover {
   box-shadow: var(--shadow-md);
   background: var(--bg-hover);
+}
+
+.createButton:active {
+  transform: scale(0.98);
+  box-shadow: var(--shadow-sm);
 }
 
 .createButtonIcon {
@@ -55,6 +61,15 @@
   padding: 0 12px;
 }
 
+.sectionHeader {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  padding: 12px 12px 4px;
+}
+
 /* Todo toggle button */
 .todoToggleBtn {
   display: flex;
@@ -65,18 +80,22 @@
   margin-top: 8px;
   background: none;
   border: none;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   font-size: 13px;
   font-weight: 500;
   color: var(--text-secondary);
   cursor: pointer;
-  transition: background 0.15s, color 0.15s;
+  transition: background var(--transition-fast), color var(--transition-fast), transform var(--transition-fast);
   text-align: left;
 }
 
 .todoToggleBtn:hover {
   background: var(--bg-hover);
   color: var(--text-primary);
+}
+
+.todoToggleBtn:active {
+  transform: scale(0.98);
 }
 
 .todoToggleBtnActive {

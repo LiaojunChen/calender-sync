@@ -32,8 +32,9 @@
   width: 48px;
   height: 48px;
   border-radius: 50%;
-  font-size: 24px;
-  font-weight: 400;
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
   color: var(--text-primary);
   flex-shrink: 0;
 }
@@ -41,7 +42,6 @@
 .dateHeaderDayToday {
   background-color: var(--today-bg);
   color: var(--today-text);
-  font-weight: 500;
 }
 
 .dateHeaderInfo {
@@ -51,8 +51,9 @@
 }
 
 .dateHeaderWeekday {
-  font-size: 14px;
-  font-weight: 500;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
   color: var(--text-secondary);
 }
 
@@ -78,14 +79,16 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 8px 12px;
-  border-radius: 8px;
+  padding: 9px 12px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
-  transition: background-color 0.15s;
+  transition: background-color var(--transition-fast), transform var(--transition-fast);
+  border-left: 3px solid transparent;
 }
 
 .eventRow:hover {
   background-color: var(--bg-hover);
+  transform: translateX(2px);
 }
 
 .eventColorBar {
@@ -106,6 +109,7 @@
 .eventTitle {
   font-size: 14px;
   font-weight: 500;
+  letter-spacing: -0.01em;
   color: var(--text-primary);
   white-space: nowrap;
   overflow: hidden;
@@ -127,21 +131,22 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 8px 12px;
-  border-radius: 8px;
+  padding: 9px 12px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
-  transition: background-color 0.15s;
+  transition: background-color var(--transition-fast), transform var(--transition-fast);
 }
 
 .todoRow:hover {
   background-color: var(--bg-hover);
+  transform: translateX(2px);
 }
 
 .todoCheckbox {
   width: 18px;
   height: 18px;
   border: 2px solid var(--text-tertiary);
-  border-radius: 3px;
+  border-radius: 4px;
   flex-shrink: 0;
 }
 

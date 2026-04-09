@@ -9,17 +9,17 @@
 .headerRow {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  border-bottom: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--border-light);
 }
 
 .headerCell {
   text-align: center;
   padding: 8px 0;
   font-size: 11px;
-  font-weight: 500;
-  color: var(--text-secondary);
+  font-weight: 600;
+  color: var(--text-tertiary);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.06em;
 }
 
 /* Grid body */
@@ -38,7 +38,7 @@
   border-bottom: 1px solid var(--border-light);
   padding: 2px;
   cursor: pointer;
-  transition: background-color 0.15s;
+  transition: background-color var(--transition-fast);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -50,6 +50,10 @@
 
 .dateCell:hover {
   background-color: var(--bg-hover);
+}
+
+.dateCellToday {
+  background-color: rgba(79, 70, 229, 0.05);
 }
 
 /* Date number header inside cell */
@@ -98,13 +102,14 @@
   align-items: center;
   gap: 4px;
   padding: 1px 4px;
-  border-radius: 3px;
+  border-radius: 4px;
   font-size: 11px;
   line-height: 1.4;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   cursor: pointer;
+  transition: filter var(--transition-fast);
 }
 
 .eventEntry:hover {
@@ -144,9 +149,10 @@
   overflow: hidden;
   text-overflow: ellipsis;
   color: #fff;
-  border-radius: 3px;
+  border-radius: 4px;
   min-height: 18px;
   cursor: pointer;
+  transition: filter var(--transition-fast);
 }
 
 .multiDayBar:hover {
@@ -177,13 +183,14 @@
   visibility: hidden;
 }
 
-/* "+N 更多" link */
+/* "+N more" link */
 .moreLink {
   font-size: 11px;
   color: var(--text-secondary);
   padding: 1px 4px;
   cursor: pointer;
   white-space: nowrap;
+  transition: color var(--transition-fast);
 }
 
 .moreLink:hover {
@@ -197,13 +204,14 @@
   align-items: center;
   gap: 4px;
   padding: 1px 4px;
-  border-radius: 3px;
+  border-radius: 4px;
   font-size: 11px;
   line-height: 1.4;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   cursor: pointer;
+  transition: background var(--transition-fast);
 }
 
 .todoEntry:hover {
