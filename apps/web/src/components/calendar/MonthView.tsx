@@ -169,6 +169,14 @@ export default function MonthView({ currentDate, events, calendars, todos = [] }
     [setDate, setView],
   );
 
+  // Memoize the rendered grid rows to avoid re-computing bar layout and
+  // per-cell event filtering on every unrelated parent render.
+  const renderedWeeks = useMemo(
+    () => weeks.map((weekDates, weekIdx) => renderWeekRow(weekDates, weekIdx)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [weeks, multiDayEvents, singleDayEvents, filteredTodos, calendarMap, currentDate, handleDateClick],
+  );
+
   /**
    * Get the event color (event override > calendar color > fallback)
    */
@@ -386,7 +394,7 @@ export default function MonthView({ currentDate, events, calendars, todos = [] }
 
       {/* Grid of date cells */}
       <div className={styles.gridBody}>
-        {weeks.map((weekDates, weekIdx) => renderWeekRow(weekDates, weekIdx))}
+        {renderedWeeks}
       </div>
     </div>
   );

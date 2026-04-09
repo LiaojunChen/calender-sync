@@ -16,6 +16,19 @@ export function getSupabaseClient(): TypedSupabaseClient | null {
     return null;
   }
 
+  // Security: warn if the Supabase URL is not using HTTPS.
+  // In production all traffic must be encrypted.
+  if (
+    typeof window !== 'undefined' &&
+    process.env.NODE_ENV !== 'test' &&
+    !url.startsWith('https://')
+  ) {
+    console.warn(
+      '[Security] Supabase URL 未使用 HTTPS，生产环境中所有通信必须通过加密连接。当前 URL：',
+      url,
+    );
+  }
+
   client = createSupabaseClient(url, anonKey);
   return client;
 }

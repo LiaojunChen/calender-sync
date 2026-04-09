@@ -1,0 +1,109 @@
+/* ============================================================
+   Toast notification system – top-right corner
+   ============================================================ */
+
+.toastContainer {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  pointer-events: none; /* allow clicks through gap areas */
+  max-width: 360px;
+  width: calc(100vw - 2rem);
+}
+
+/* ---- Individual toast ---- */
+
+.toast {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.4;
+  color: #fff;
+  pointer-events: all;
+  animation: toastEnter 0.25s ease-out forwards;
+  will-change: opacity, transform;
+}
+
+.toast.exiting {
+  animation: toastExit 0.3s ease-in forwards;
+}
+
+/* ---- Type variants ---- */
+
+.error {
+  background-color: #d32f2f;
+}
+
+.success {
+  background-color: #2e7d32;
+}
+
+.info {
+  background-color: #1565c0;
+}
+
+/* ---- Inner elements ---- */
+
+.icon {
+  flex-shrink: 0;
+  font-size: 0.9rem;
+  font-style: normal;
+  width: 1.1em;
+  text-align: center;
+}
+
+.message {
+  flex: 1;
+  word-break: break-word;
+}
+
+.closeBtn {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: rgba(255, 255, 255, 0.8);
+  padding: 2px;
+  border-radius: 3px;
+  transition: color 0.15s;
+}
+
+.closeBtn:hover {
+  color: #fff;
+}
+
+/* ---- Animations ---- */
+
+@keyframes toastEnter {
+  from {
+    opacity: 0;
+    transform: translateX(40px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes toastExit {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(40px);
+  }
+}

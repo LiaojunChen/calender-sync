@@ -27,6 +27,7 @@ import {
   type LocalException,
 } from '@/hooks/useExpandedEvents';
 import Snackbar from '@/components/common/Snackbar';
+import Spinner from '@/components/common/Spinner';
 import DayView from '@/components/calendar/DayView';
 import WeekView from '@/components/calendar/WeekView';
 import MonthView from '@/components/calendar/MonthView';
@@ -865,6 +866,17 @@ export default function MainArea() {
       default:
         return null;
     }
+  }
+
+  // Show a full-area spinner while the app is loading (e.g. auth check)
+  if (state.isLoading) {
+    return (
+      <main className={styles.mainArea}>
+        <div className={styles.loadingOverlay}>
+          <Spinner label="日历加载中…" size={48} />
+        </div>
+      </main>
+    );
   }
 
   return (

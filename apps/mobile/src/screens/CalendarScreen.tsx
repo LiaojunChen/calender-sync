@@ -15,13 +15,16 @@ import React, {
   useState,
 } from 'react';
 import {
+  Alert,
   PanResponder,
   StyleSheet,
+  Text,
   View,
   type GestureResponderEvent,
   type PanResponderGestureState,
 } from 'react-native';
 import { useTheme } from '../hooks/useTheme';
+import { useNetworkSync } from '../hooks/useNetworkSync';
 import MonthView from '../components/calendar/MonthView';
 import WeekView from '../components/calendar/WeekView';
 import DayView from '../components/calendar/DayView';
@@ -216,6 +219,7 @@ export default function CalendarScreen({
   const [currentView, setCurrentView] = useState<ViewType>(initialView);
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
   const [refreshing, setRefreshing] = useState(false);
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
   // Events and calendars (mock; replaced by real data in Task 11)
   const [events] = useState<Event[]>(MOCK_EVENTS);
@@ -225,23 +229,41 @@ export default function CalendarScreen({
   // Reschedule notifications and refresh widget whenever data changes
   useEffect(() => {
     void (async () => {
-      await cancelAllScheduledNotifications();
-      await scheduleNotificationsForItems(events, todos, calendars);
-      // Keep the home-screen widget in sync after any data change
-      // (covers: event create/edit/delete, todo toggle, pull-to-refresh)
-      await broadcastWidgetRefresh(events, todos, calendars);
+      try {
+        await cancelAllScheduledNotifications();
+        await scheduleNotificationsForItems(events, todos, calendars);
+        // Keep the home-screen widget in sync after any data change
+        // (covers: event create/edit/delete, todo toggle, pull-to-refresh)
+        await broadcastWidgetRefresh(events, todos, calendars);
+        setFetchError(null);
+      } catch (err) {
+        const message =
+          err instanceof Error ? err.message : '同步失败，请重试';
+        setFetchError(message);
+        Alert.alert('同步失败', '数据同步遇到问题，请稍后重试。', [
+          { text: '好的', style: 'cancel' },
+        ]);
+      }
     })();
   }, [events, todos, calendars]);
 
   // Refresh handler
   const handleRefresh = useCallback(() => {
     setRefreshing(true);
+    setFetchError(null);
     // Simulate async data refresh (replace with real Supabase query in Task 11).
     // broadcastWidgetRefresh is called automatically by the data-change effect above.
     setTimeout(() => {
       setRefreshing(false);
     }, 600);
   }, []);
+
+  // Auto-retry sync when network reconnects
+  const { isConnected } = useNetworkSync(
+    useCallback(() => {
+      handleRefresh();
+    }, [handleRefresh]),
+  );
 
   // Day selection from month/week headers
   const handleDaySelect = useCallback((date: Date) => {
@@ -362,6 +384,20 @@ export default function CalendarScreen({
       style={[styles.container, { backgroundColor: colors.background }]}
       {...panResponder.panHandlers}
     >
+      {/* Offline banner */}
+      {!isConnected && (
+        <View style={styles.offlineBanner}>
+          <Text style={styles.offlineBannerText}>
+            网络连接失败，请检查您的网络
+          </Text>
+        </View>
+      )}
+      {/* Error banner (shown when connected but sync failed) */}
+      {isConnected && fetchError !== null && (
+        <View style={styles.errorBanner}>
+          <Text style={styles.errorBannerText}>同步失败，请重试</Text>
+        </View>
+      )}
       {viewContent}
     </View>
   );
@@ -374,5 +410,27 @@ export default function CalendarScreen({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  offlineBanner: {
+    backgroundColor: '#b71c1c',
+    paddingVertical: 6,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+  },
+  offlineBannerText: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  errorBanner: {
+    backgroundColor: '#e65100',
+    paddingVertical: 6,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+  },
+  errorBannerText: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '600',
   },
 });

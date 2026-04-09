@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { AppProvider } from '@/contexts/AppContext';
+import { ToastProvider } from '@/components/common/Toast';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -15,7 +16,9 @@ export default function RootLayout({
   return (
     <html lang="zh-CN" suppressHydrationWarning>
       <body>
-        <AppProvider>{children}</AppProvider>
+        <AppProvider>
+          <ToastProvider>{children}</ToastProvider>
+        </AppProvider>
       </body>
     </html>
   );
