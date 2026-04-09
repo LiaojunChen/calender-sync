@@ -7,12 +7,19 @@
   "exports": {
     ".": "./src/index.ts",
     "./types": "./src/types.ts",
-    "./date-utils": "./src/date-utils.ts"
+    "./date-utils": "./src/date-utils.ts",
+    "./database-types": "./src/database.types.ts",
+    "./supabase": "./src/supabase.ts",
+    "./auth": "./src/auth.ts",
+    "./api": "./src/api.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
     "typescript": "^5.4.0"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.103.0"
   }
 }
