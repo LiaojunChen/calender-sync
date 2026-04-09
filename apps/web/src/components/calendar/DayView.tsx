@@ -10,9 +10,21 @@ interface DayViewProps {
   currentDate: Date;
   events: Event[];
   calendars: Calendar[];
+  onCreateEvent?: (startDate: Date, startMinutes: number, endMinutes: number) => void;
+  onEventClick?: (event: Event, rect: DOMRect) => void;
+  onEventMove?: (eventId: string, newStartMinutes: number, dayOffset: number) => void;
+  onEventResize?: (eventId: string, newEndMinutes: number) => void;
 }
 
-export default function DayView({ currentDate, events, calendars }: DayViewProps) {
+export default function DayView({
+  currentDate,
+  events,
+  calendars,
+  onCreateEvent,
+  onEventClick,
+  onEventMove,
+  onEventResize,
+}: DayViewProps) {
   const dates = useMemo(() => [startOfDay(currentDate)], [currentDate]);
 
   const calendarMap = useMemo(() => {
@@ -48,6 +60,10 @@ export default function DayView({ currentDate, events, calendars }: DayViewProps
         dates={dates}
         events={filteredEvents}
         calendarMap={calendarMap}
+        onCreateEvent={onCreateEvent}
+        onEventClick={onEventClick}
+        onEventMove={onEventMove}
+        onEventResize={onEventResize}
       />
     </div>
   );

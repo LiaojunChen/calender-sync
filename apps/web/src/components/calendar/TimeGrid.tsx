@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import type { Event, Calendar } from '@project-calendar/shared';
 import { isSameDay, isToday } from '@project-calendar/shared';
 import EventBlock, { HOUR_HEIGHT } from '@/components/event/EventBlock';
@@ -10,6 +10,12 @@ import styles from './TimeGrid.module.css';
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
 const DAY_NAMES = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
 
+/** Snap interval in minutes */
+const SNAP_MINUTES = 15;
+
+/** Movement threshold for distinguishing click from drag */
+const DRAG_THRESHOLD = 5;
+
 interface TimeGridProps {
   /** Array of dates to show (length 1 for day view, 7 for week view) */
   dates: Date[];
@@ -17,6 +23,14 @@ interface TimeGridProps {
   events: Event[];
   /** Calendar map for colour lookup */
   calendarMap: Map<string, Calendar>;
+  /** Called when user wants to create an event (click or drag on empty area) */
+  onCreateEvent?: (startDate: Date, startMinutes: number, endMinutes: number) => void;
+  /** Called when an event is clicked (to show preview) */
+  onEventClick?: (event: Event, rect: DOMRect) => void;
+  /** Called when an event is dragged to a new time/day */
+  onEventMove?: (eventId: string, newStartMinutes: number, dayOffset: number) => void;
+  /** Called when an event is resized */
+  onEventResize?: (eventId: string, newEndMinutes: number) => void;
 }
 
 // ------------------------------------------------------------------
@@ -75,8 +89,6 @@ function layoutEvents(events: Event[]): LayoutSlot[] {
   }
 
   // Now, for each event determine the total columns in its overlap group.
-  // We do a second pass: for each event find all overlapping events and take
-  // the max column among them + 1.
   const result: LayoutSlot[] = [];
   for (const p of placed) {
     const pStart =
@@ -84,7 +96,6 @@ function layoutEvents(events: Event[]): LayoutSlot[] {
       new Date(p.event.start_time).getMinutes();
     const pEnd = p.end;
 
-    // Find max column among all overlapping placed events
     let maxCol = p.col;
     for (const q of placed) {
       const qStart =
@@ -105,6 +116,11 @@ function layoutEvents(events: Event[]): LayoutSlot[] {
   return result;
 }
 
+/** Snap a minute value to the nearest SNAP_MINUTES interval */
+function snapMinutes(minutes: number): number {
+  return Math.round(minutes / SNAP_MINUTES) * SNAP_MINUTES;
+}
+
 /**
  * Shared time grid used by both DayView and WeekView.
  */
@@ -112,10 +128,22 @@ export default function TimeGrid({
   dates,
   events,
   calendarMap,
+  onCreateEvent,
+  onEventClick,
+  onEventMove,
+  onEventResize,
 }: TimeGridProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const columnsRef = useRef<HTMLDivElement>(null);
   const [currentTimeTop, setCurrentTimeTop] = useState<number | null>(null);
   const totalHeight = 24 * HOUR_HEIGHT;
+
+  // Ghost block for drag-to-create
+  const [ghost, setGhost] = useState<{
+    colIdx: number;
+    startMin: number;
+    endMin: number;
+  } | null>(null);
 
   // --- Current time indicator ---
   useEffect(() => {
@@ -165,6 +193,106 @@ export default function TimeGrid({
     return dates.findIndex((d) => isToday(d));
   }, [dates]);
 
+  // --- Day column width for cross-day drag ---
+  const [dayColumnWidth, setDayColumnWidth] = useState(0);
+  useEffect(() => {
+    if (!columnsRef.current) return;
+    const firstCol = columnsRef.current.querySelector('[data-day-column]') as HTMLElement | null;
+    if (firstCol) {
+      setDayColumnWidth(firstCol.offsetWidth);
+    }
+    const ro = new ResizeObserver(() => {
+      const col = columnsRef.current?.querySelector('[data-day-column]') as HTMLElement | null;
+      if (col) setDayColumnWidth(col.offsetWidth);
+    });
+    ro.observe(columnsRef.current);
+    return () => ro.disconnect();
+  }, [dates]);
+
+  // --- Click-to-create and drag-to-create on empty area ---
+  const handleColumnMouseDown = useCallback(
+    (e: React.MouseEvent, colIdx: number) => {
+      // Only handle left button clicks on the column itself (not on events)
+      if (e.button !== 0) return;
+      if ((e.target as HTMLElement).closest('[data-event-block]')) return;
+
+      const columnEl = e.currentTarget as HTMLElement;
+      const rect = columnEl.getBoundingClientRect();
+      const scrollTop = scrollRef.current?.scrollTop ?? 0;
+      const relY = e.clientY - rect.top + scrollTop;
+      const clickedMinutes = snapMinutes(Math.max(0, (relY / HOUR_HEIGHT) * 60));
+
+      const startY = e.clientY;
+      let isDragging = false;
+      let cancelled = false;
+      let currentEndMin = clickedMinutes + SNAP_MINUTES;
+
+      const onMouseMove = (me: MouseEvent) => {
+        if (cancelled) return;
+        const dy = Math.abs(me.clientY - startY);
+        if (!isDragging && dy < DRAG_THRESHOLD) return;
+        isDragging = true;
+
+        const relY2 = me.clientY - rect.top + (scrollRef.current?.scrollTop ?? 0);
+        const draggedMinutes = snapMinutes(Math.max(0, Math.min((relY2 / HOUR_HEIGHT) * 60, 24 * 60)));
+
+        const startMin = Math.min(clickedMinutes, draggedMinutes);
+        const endMin = Math.max(clickedMinutes, draggedMinutes);
+
+        currentEndMin = endMin;
+        setGhost({
+          colIdx,
+          startMin: Math.max(startMin, 0),
+          endMin: Math.min(Math.max(endMin, startMin + SNAP_MINUTES), 24 * 60),
+        });
+      };
+
+      const onMouseUp = (me: MouseEvent) => {
+        window.removeEventListener('mousemove', onMouseMove);
+        window.removeEventListener('mouseup', onMouseUp);
+        window.removeEventListener('keydown', onKeyDown);
+        setGhost(null);
+
+        if (cancelled) return;
+
+        if (!isDragging) {
+          // Click-to-create: default 1-hour duration
+          if (onCreateEvent) {
+            onCreateEvent(dates[colIdx], clickedMinutes, clickedMinutes + 60);
+          }
+        } else {
+          // Drag-to-create
+          if (onCreateEvent) {
+            const relY2 = me.clientY - rect.top + (scrollRef.current?.scrollTop ?? 0);
+            const draggedMinutes = snapMinutes(Math.max(0, Math.min((relY2 / HOUR_HEIGHT) * 60, 24 * 60)));
+            const startMin = Math.min(clickedMinutes, draggedMinutes);
+            const endMin = Math.max(clickedMinutes, draggedMinutes);
+            onCreateEvent(
+              dates[colIdx],
+              Math.max(startMin, 0),
+              Math.min(Math.max(endMin, startMin + SNAP_MINUTES), 24 * 60),
+            );
+          }
+        }
+      };
+
+      const onKeyDown = (ke: KeyboardEvent) => {
+        if (ke.key === 'Escape') {
+          cancelled = true;
+          setGhost(null);
+          window.removeEventListener('mousemove', onMouseMove);
+          window.removeEventListener('mouseup', onMouseUp);
+          window.removeEventListener('keydown', onKeyDown);
+        }
+      };
+
+      window.addEventListener('mousemove', onMouseMove);
+      window.addEventListener('mouseup', onMouseUp);
+      window.addEventListener('keydown', onKeyDown);
+    },
+    [dates, onCreateEvent],
+  );
+
   return (
     <div className={styles.container}>
       {/* Column headers */}
@@ -205,6 +333,7 @@ export default function TimeGrid({
           dates={dates}
           allDayEvents={allDayEvents}
           calendarMap={calendarMap}
+          onEventClick={onEventClick}
         />
       )}
 
@@ -225,7 +354,7 @@ export default function TimeGrid({
           </div>
 
           {/* Day columns */}
-          <div className={styles.columnsContainer}>
+          <div className={styles.columnsContainer} ref={columnsRef}>
             {/* Grid lines (drawn once behind all columns) */}
             {HOURS.map((h) => (
               <React.Fragment key={h}>
@@ -262,16 +391,45 @@ export default function TimeGrid({
                 .join(' ');
 
               return (
-                <div key={colIdx} className={colClasses}>
+                <div
+                  key={colIdx}
+                  className={colClasses}
+                  data-day-column
+                  onMouseDown={(e) => handleColumnMouseDown(e, colIdx)}
+                >
                   {layout.map((slot) => (
-                    <EventBlock
-                      key={slot.event.id}
-                      event={slot.event}
-                      calendar={calendarMap.get(slot.event.calendar_id)}
-                      colIndex={slot.colIndex}
-                      colTotal={slot.colTotal}
-                    />
+                    <div key={slot.event.id} data-event-block>
+                      <EventBlock
+                        event={slot.event}
+                        calendar={calendarMap.get(slot.event.calendar_id)}
+                        colIndex={slot.colIndex}
+                        colTotal={slot.colTotal}
+                        onClick={onEventClick}
+                        onDragMove={onEventMove}
+                        onDragResize={onEventResize}
+                        dayColumnWidth={dayColumnWidth}
+                      />
+                    </div>
                   ))}
+
+                  {/* Ghost block for drag-to-create */}
+                  {ghost && ghost.colIdx === colIdx && (
+                    <div
+                      className={styles.ghostBlock}
+                      style={{
+                        top: `${(ghost.startMin / 60) * HOUR_HEIGHT}px`,
+                        height: `${((ghost.endMin - ghost.startMin) / 60) * HOUR_HEIGHT}px`,
+                      }}
+                    >
+                      <span className={styles.ghostTime}>
+                        {Math.floor(ghost.startMin / 60)}:
+                        {(ghost.startMin % 60).toString().padStart(2, '0')}
+                        {' – '}
+                        {Math.floor(ghost.endMin / 60)}:
+                        {(ghost.endMin % 60).toString().padStart(2, '0')}
+                      </span>
+                    </div>
+                  )}
                 </div>
               );
             })}

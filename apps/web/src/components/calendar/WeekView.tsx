@@ -10,9 +10,21 @@ interface WeekViewProps {
   currentDate: Date;
   events: Event[];
   calendars: Calendar[];
+  onCreateEvent?: (startDate: Date, startMinutes: number, endMinutes: number) => void;
+  onEventClick?: (event: Event, rect: DOMRect) => void;
+  onEventMove?: (eventId: string, newStartMinutes: number, dayOffset: number) => void;
+  onEventResize?: (eventId: string, newEndMinutes: number) => void;
 }
 
-export default function WeekView({ currentDate, events, calendars }: WeekViewProps) {
+export default function WeekView({
+  currentDate,
+  events,
+  calendars,
+  onCreateEvent,
+  onEventClick,
+  onEventMove,
+  onEventResize,
+}: WeekViewProps) {
   // Compute the 7 dates of the week (Monday-first)
   const dates = useMemo(() => {
     const wStart = startOfWeek(currentDate, 1);
@@ -51,6 +63,10 @@ export default function WeekView({ currentDate, events, calendars }: WeekViewPro
         dates={dates}
         events={filteredEvents}
         calendarMap={calendarMap}
+        onCreateEvent={onCreateEvent}
+        onEventClick={onEventClick}
+        onEventMove={onEventMove}
+        onEventResize={onEventResize}
       />
     </div>
   );

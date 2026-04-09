@@ -54,6 +54,21 @@
   transition: box-shadow 0.15s ease;
 }
 
+/* Resize handle at the bottom of timed events */
+.resizeHandle {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 6px;
+  cursor: s-resize;
+  border-radius: 0 0 4px 4px;
+}
+
+.resizeHandle:hover {
+  background: rgba(0, 0, 0, 0.08);
+}
+
 .allDayBlock:hover {
   box-shadow: var(--shadow-sm);
 }

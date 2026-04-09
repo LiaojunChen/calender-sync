@@ -8,7 +8,7 @@ import React, {
   useMemo,
   useReducer,
 } from 'react';
-import type { Calendar } from '@project-calendar/shared';
+import type { Calendar, Event } from '@project-calendar/shared';
 
 // ============================================================
 // Types
@@ -26,6 +26,8 @@ export interface AppState {
   sidebarOpen: boolean;
   /** All calendars for the user */
   calendars: Calendar[];
+  /** All events */
+  events: Event[];
   /** Theme preference */
   theme: ThemeMode;
   /** Resolved theme (after applying system preference) */
@@ -47,6 +49,10 @@ type AppAction =
   | { type: 'UPDATE_CALENDAR'; calendar: Calendar }
   | { type: 'REMOVE_CALENDAR'; id: string }
   | { type: 'TOGGLE_CALENDAR_VISIBILITY'; id: string }
+  | { type: 'SET_EVENTS'; events: Event[] }
+  | { type: 'ADD_EVENT'; event: Event }
+  | { type: 'UPDATE_EVENT'; event: Event }
+  | { type: 'DELETE_EVENT'; id: string }
   | { type: 'SET_THEME'; theme: ThemeMode }
   | { type: 'SET_RESOLVED_THEME'; resolvedTheme: 'light' | 'dark' }
   | { type: 'SET_AUTHENTICATED'; isAuthenticated: boolean; userId: string | null }
@@ -74,6 +80,7 @@ const initialState: AppState = {
   currentDate: new Date(),
   sidebarOpen: true,
   calendars: [],
+  events: [],
   theme: 'system',
   resolvedTheme: 'light',
   isAuthenticated: false,
@@ -115,6 +122,22 @@ function appReducer(state: AppState, action: AppAction): AppState {
         calendars: state.calendars.map((c) =>
           c.id === action.id ? { ...c, is_visible: !c.is_visible } : c
         ),
+      };
+    case 'SET_EVENTS':
+      return { ...state, events: action.events };
+    case 'ADD_EVENT':
+      return { ...state, events: [...state.events, action.event] };
+    case 'UPDATE_EVENT':
+      return {
+        ...state,
+        events: state.events.map((e) =>
+          e.id === action.event.id ? action.event : e
+        ),
+      };
+    case 'DELETE_EVENT':
+      return {
+        ...state,
+        events: state.events.filter((e) => e.id !== action.id),
       };
     case 'SET_THEME':
       return { ...state, theme: action.theme };

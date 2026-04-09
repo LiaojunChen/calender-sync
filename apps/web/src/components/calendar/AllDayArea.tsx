@@ -13,6 +13,8 @@ interface AllDayAreaProps {
   allDayEvents: Event[];
   /** Calendar map for colour lookup */
   calendarMap: Map<string, Calendar>;
+  /** Called when an all-day event is clicked */
+  onEventClick?: (event: Event, rect: DOMRect) => void;
 }
 
 /**
@@ -33,6 +35,7 @@ export default function AllDayArea({
   dates,
   allDayEvents,
   calendarMap,
+  onEventClick,
 }: AllDayAreaProps) {
   return (
     <div className={styles.allDayArea}>
@@ -77,6 +80,7 @@ export default function AllDayArea({
                     event={ev}
                     calendar={calendarMap.get(ev.calendar_id)}
                     style={{ borderRadius }}
+                    onClick={onEventClick}
                   />
                 );
               })}
