@@ -5,3 +5,4 @@ export * from './supabase';
 export * from './auth';
 export * from './api';
 export * from './validators';
+export * from './widgetUtils';
