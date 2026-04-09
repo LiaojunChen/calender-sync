@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Main widget layout (2×2 minimum, resizable).
+  Structure:
+    ┌──────────────────────────────────────┐
+    │ Header (date + weekday + month + "+")│
+    ├──────────────────────────────────────┤
+    │ Scrollable ListView (events / todos) │
+    │  … fade overlay at the bottom …     │
+    └──────────────────────────────────────┘
+-->
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@drawable/widget_background"
+    android:padding="8dp">
+
+    <!-- ── Header ── -->
+    <LinearLayout
+        android:id="@+id/widget_header"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingBottom="4dp">
+
+        <!-- Date block: large day number + weekday + month stacked vertically -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <!-- Day number  e.g. "9" -->
+            <TextView
+                android:id="@+id/widget_day_number"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="34sp"
+                android:textStyle="bold"
+                android:textColor="@color/widget_text_primary"
+                android:lineSpacingExtra="-4dp"
+                android:text="9" />
+
+            <!-- Weekday  e.g. "周四" -->
+            <TextView
+                android:id="@+id/widget_weekday"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="16sp"
+                android:textColor="@color/widget_text_primary"
+                android:text="周四" />
+
+            <!-- Month  e.g. "4月" -->
+            <TextView
+                android:id="@+id/widget_month"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="12sp"
+                android:textColor="@color/widget_text_secondary"
+                android:text="4月" />
+        </LinearLayout>
+
+        <!-- "+" new-event button (30dp circle) -->
+        <TextView
+            android:id="@+id/widget_btn_add"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:gravity="center"
+            android:text="+"
+            android:textSize="20sp"
+            android:textColor="@color/widget_text_primary"
+            android:background="@drawable/widget_btn_add_bg" />
+    </LinearLayout>
+
+    <!-- Thin divider -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="0.5dp"
+        android:background="@color/widget_divider"
+        android:layout_marginBottom="4dp" />
+
+    <!-- ── Event list container (FrameLayout allows the fade overlay) ── -->
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+
+        <!-- Scrollable event / todo list -->
+        <ListView
+            android:id="@+id/widget_list_view"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:scrollbars="none"
+            android:divider="@null"
+            android:dividerHeight="0dp" />
+
+        <!-- Empty state -->
+        <TextView
+            android:id="@+id/widget_empty_text"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:gravity="center"
+            android:text="@string/widget_no_events"
+            android:textSize="12sp"
+            android:textColor="@color/widget_text_secondary"
+            android:visibility="gone" />
+
+        <!-- Bottom fade hint so users know the list is scrollable -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="32dp"
+            android:layout_gravity="bottom"
+            android:background="@drawable/widget_fade_bottom" />
+    </FrameLayout>
+</LinearLayout>

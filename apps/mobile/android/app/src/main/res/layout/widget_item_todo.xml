@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Todo item row inside the widget ListView.
+  Layout:
+    [ 4dp colour bar ] [ □ checkbox icon ] [ title (14sp) ]
+                                            [ due time (11sp) ]
+-->
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/item_todo_root"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:paddingTop="3dp"
+    android:paddingBottom="3dp"
+    android:paddingEnd="4dp">
+
+    <!-- Coloured left accent bar -->
+    <View
+        android:id="@+id/item_todo_color_bar"
+        android:layout_width="4dp"
+        android:layout_height="match_parent"
+        android:layout_marginEnd="6dp"
+        android:minHeight="32dp"
+        android:background="#4A90E2" />
+
+    <!-- Checkbox icon (static; widget cannot handle interactive checkboxes) -->
+    <TextView
+        android:id="@+id/item_todo_checkbox"
+        android:layout_width="18dp"
+        android:layout_height="18dp"
+        android:gravity="center"
+        android:text="☐"
+        android:textSize="14sp"
+        android:textColor="@color/widget_text_secondary"
+        android:layout_marginEnd="4dp" />
+
+    <!-- Text block: title + due time -->
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/item_todo_title"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textSize="14sp"
+            android:maxLines="1"
+            android:ellipsize="end"
+            android:textColor="@color/widget_text_primary"
+            android:text="Todo title" />
+
+        <TextView
+            android:id="@+id/item_todo_time"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textSize="11sp"
+            android:maxLines="1"
+            android:ellipsize="end"
+            android:textColor="@color/widget_text_secondary"
+            android:text="10:00" />
+    </LinearLayout>
+</LinearLayout>

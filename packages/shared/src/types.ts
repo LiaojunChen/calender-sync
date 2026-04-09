@@ -115,3 +115,12 @@ export interface WidgetItem {
   color: string;
   isCompleted: boolean;
 }
+
+/** A group of widget items for a single day, used by the Android home screen widget */
+export interface WidgetDayGroup {
+  /** ISO date string: 'YYYY-MM-DD' */
+  date: string;
+  /** Human-readable label, e.g. "4月9日 周四" */
+  label: string;
+  items: WidgetItem[];
+}

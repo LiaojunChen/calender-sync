@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Widget colours for dark mode -->
+<resources>
+    <color name="widget_background">#FF1E1E1E</color>
+    <color name="widget_text_primary">#FFEEEEEE</color>
+    <color name="widget_text_secondary">#FFAAAAAA</color>
+    <color name="widget_divider">#FF3A3A3A</color>
+    <color name="widget_btn_add_bg">#1AEEEEEE</color>
+</resources>

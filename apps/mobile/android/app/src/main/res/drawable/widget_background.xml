@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Widget background: rounded rectangle, colour comes from widget_colors.xml
+  so it automatically flips between light and dark via values-night/.
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="@color/widget_background" />
+    <corners android:radius="16dp" />
+</shape>

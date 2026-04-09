@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_description">Calendar Widget – shows upcoming events and todos</string>
+    <string name="widget_no_events">No upcoming events</string>
+</resources>

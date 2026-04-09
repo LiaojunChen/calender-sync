@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Gradient overlay at the bottom of the list to hint that more items
+  are below.  The start colour matches the widget background so it fades
+  from transparent (top) to opaque background (bottom).
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <gradient
+        android:startColor="#00FFFFFF"
+        android:endColor="@color/widget_background"
+        android:angle="270" />
+</shape>
