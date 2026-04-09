@@ -261,11 +261,83 @@
   text-decoration: underline;
 }
 
-/* Recurrence placeholder */
+/* Recurrence */
 .recurrencePlaceholder {
   font-size: 13px;
   color: var(--text-tertiary);
   font-style: italic;
+}
+
+.recurrenceCustomForm {
+  margin-top: 10px;
+  padding: 12px;
+  background: var(--bg-hover);
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.recurrenceCustomRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.recurrenceCustomLabel {
+  font-size: 12px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  min-width: 36px;
+}
+
+.recurrenceIntervalInput {
+  width: 60px;
+  padding: 5px 8px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background: var(--bg-input);
+  color: var(--text-primary);
+  font-size: 13px;
+  outline: none;
+  text-align: center;
+}
+
+.recurrenceIntervalInput:focus {
+  border-color: var(--accent-primary);
+}
+
+.recurrenceWeekdayList {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.recurrenceWeekdayBtn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid var(--border-color);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 11px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, color 0.15s;
+}
+
+.recurrenceWeekdayBtn[data-selected='true'] {
+  background: var(--accent-primary);
+  color: var(--text-on-primary);
+  border-color: var(--accent-primary);
+}
+
+.recurrenceWeekdayBtn:hover:not([data-selected='true']) {
+  background: var(--bg-hover);
+  border-color: var(--accent-primary);
 }
 
 /* Actions */

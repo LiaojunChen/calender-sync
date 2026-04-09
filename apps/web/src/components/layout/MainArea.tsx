@@ -15,10 +15,16 @@ import {
   toggleTodoCompleted as apiToggleTodoCompleted,
   getTodos as apiGetTodos,
   setRemindersForTodo,
+  createRecurrenceRule as apiCreateRecurrenceRule,
 } from '@project-calendar/shared';
 import type { Event, Calendar, Todo } from '@project-calendar/shared';
-import { addDays } from '@project-calendar/shared';
+import { addDays, startOfMonth, endOfMonth, addMonths, startOfWeek, endOfWeek } from '@project-calendar/shared';
 import { useUndo } from '@/hooks/useUndo';
+import {
+  useExpandedEvents,
+  type EventWithRrule,
+  type LocalException,
+} from '@/hooks/useExpandedEvents';
 import Snackbar from '@/components/common/Snackbar';
 import DayView from '@/components/calendar/DayView';
 import WeekView from '@/components/calendar/WeekView';
@@ -26,6 +32,10 @@ import MonthView from '@/components/calendar/MonthView';
 import AgendaView from '@/components/calendar/AgendaView';
 import EventForm from '@/components/event/EventForm';
 import EventPreview from '@/components/event/EventPreview';
+import RecurrenceActionDialog, {
+  type RecurrenceEditAction,
+  type RecurrenceDeleteAction,
+} from '@/components/event/RecurrenceActionDialog';
 import TodoForm from '@/components/todo/TodoForm';
 import TodoList from '@/components/todo/TodoList';
 import type { EventFormData } from '@/components/event/EventForm';
@@ -49,6 +59,41 @@ function nextDemoTodoId(): string {
 
 function buildDateTimeISO(dateStr: string, timeStr: string): string {
   return new Date(`${dateStr}T${timeStr}:00`).toISOString();
+}
+
+/** Get the expanded range for the current view (+ 1-month buffer) */
+function getViewRange(view: string, currentDate: Date): { start: Date; end: Date } {
+  switch (view) {
+    case 'day': {
+      const start = new Date(currentDate);
+      start.setHours(0, 0, 0, 0);
+      start.setDate(start.getDate() - 30);
+      const end = new Date(currentDate);
+      end.setHours(23, 59, 59, 999);
+      end.setDate(end.getDate() + 30);
+      return { start, end };
+    }
+    case 'week': {
+      const weekStart = startOfWeek(currentDate, 1);
+      const start = addDays(weekStart, -30);
+      const weekEnd = endOfWeek(currentDate, 1);
+      const end = addDays(weekEnd, 30);
+      return { start, end };
+    }
+    case 'month': {
+      const monthStart = startOfMonth(currentDate);
+      const start = addDays(monthStart, -35);
+      const monthEnd = endOfMonth(currentDate);
+      const end = addDays(monthEnd, 35);
+      return { start, end };
+    }
+    case 'agenda':
+    default: {
+      const start = addMonths(currentDate, -1);
+      const end = addMonths(currentDate, 3);
+      return { start, end };
+    }
+  }
 }
 
 // ============================================================
@@ -109,8 +154,20 @@ export default function MainArea() {
     })();
   }, [isDemoMode, state.isAuthenticated, dispatch]);
 
-  const events = state.events;
+  const rawEvents = state.events as EventWithRrule[];
   const todos = state.todos;
+
+  // Local exceptions state (for demo mode; in real mode they'd come from DB)
+  const [localExceptions, setLocalExceptions] = useState<LocalException[]>([]);
+
+  // Compute view range with buffer
+  const { start: rangeStart, end: rangeEnd } = useMemo(
+    () => getViewRange(state.currentView, state.currentDate),
+    [state.currentView, state.currentDate],
+  );
+
+  // Expand recurring events
+  const events = useExpandedEvents(rawEvents, rangeStart, rangeEnd, localExceptions);
 
   // Calendar map
   const calendarMap = useMemo(() => {
@@ -132,8 +189,15 @@ export default function MainArea() {
   // -----------------------------------------------------------
   // Event preview state
   // -----------------------------------------------------------
-  const [previewEvent, setPreviewEvent] = useState<Event | null>(null);
+  const [previewEvent, setPreviewEvent] = useState<EventWithRrule | null>(null);
   const [previewRect, setPreviewRect] = useState<DOMRect | null>(null);
+
+  // -----------------------------------------------------------
+  // Recurrence action dialog state
+  // -----------------------------------------------------------
+  const [recurringDialogMode, setRecurringDialogMode] = useState<'edit' | 'delete' | null>(null);
+  // The expanded instance that triggered the dialog
+  const [pendingRecurringEvent, setPendingRecurringEvent] = useState<EventWithRrule | null>(null);
 
   // -----------------------------------------------------------
   // Todo form state
@@ -163,7 +227,7 @@ export default function MainArea() {
   // -----------------------------------------------------------
   const handleEventClick = useCallback(
     (event: Event, rect: DOMRect) => {
-      setPreviewEvent(event);
+      setPreviewEvent(event as EventWithRrule);
       setPreviewRect(rect);
     },
     [],
@@ -174,13 +238,65 @@ export default function MainArea() {
   // -----------------------------------------------------------
   const handleEditFromPreview = useCallback(
     (event: Event) => {
+      const evWithRrule = event as EventWithRrule;
+
+      // Close preview
       setPreviewEvent(null);
       setPreviewRect(null);
-      setEditingEvent(event);
-      setFormDefaults({});
-      setFormOpen(true);
+
+      if (evWithRrule._recurringEventId) {
+        // This is a recurring instance — show choice dialog
+        setPendingRecurringEvent(evWithRrule);
+        setRecurringDialogMode('edit');
+      } else {
+        // Simple event — open form directly
+        setEditingEvent(event);
+        setFormDefaults({});
+        setFormOpen(true);
+      }
     },
     [],
+  );
+
+  // -----------------------------------------------------------
+  // Handle recurrence edit action choice
+  // -----------------------------------------------------------
+  const handleRecurrenceEditAction = useCallback(
+    (action: RecurrenceEditAction) => {
+      const inst = pendingRecurringEvent;
+      if (!inst || !inst._recurringEventId || !inst._instanceDate) return;
+
+      setRecurringDialogMode(null);
+      setPendingRecurringEvent(null);
+
+      const parentId = inst._recurringEventId;
+      const parentEvent = rawEvents.find((e) => e.id === parentId);
+      if (!parentEvent) return;
+
+      if (action === 'this') {
+        // Open the form pre-filled with instance times; on save we write an exception
+        // We pass a synthetic event with the instance times for the form to show
+        const instanceEventForEdit: EventWithRrule = {
+          ...parentEvent,
+          id: inst.id, // keep composite id so save handler can detect it
+          start_time: inst.start_time,
+          end_time: inst.end_time,
+          title: inst.title,
+          _recurringEventId: parentId,
+          _instanceDate: inst._instanceDate,
+        };
+        setEditingEvent(instanceEventForEdit as Event);
+        setFormDefaults({});
+        setFormOpen(true);
+      } else if (action === 'all') {
+        // Edit the parent event normally
+        setEditingEvent(parentEvent as Event);
+        setFormDefaults({});
+        setFormOpen(true);
+      }
+      // 'this_and_future' — complex, treated same as 'all' for demo simplicity
+    },
+    [pendingRecurringEvent, rawEvents],
   );
 
   // -----------------------------------------------------------
@@ -188,34 +304,81 @@ export default function MainArea() {
   // -----------------------------------------------------------
   const handleDeleteEvent = useCallback(
     (eventId: string) => {
-      const ev = events.find((e) => e.id === eventId);
+      // Check if this is an expanded instance
+      const ev = events.find((e) => e.id === eventId) as EventWithRrule | undefined;
       if (!ev) return;
 
       setPreviewEvent(null);
       setPreviewRect(null);
 
+      if (ev._recurringEventId) {
+        // Show recurrence dialog
+        setPendingRecurringEvent(ev);
+        setRecurringDialogMode('delete');
+      } else {
+        // Normal delete
+        doDeleteEvent(ev, eventId);
+      }
+    },
+    [events],
+  );
+
+  const doDeleteEvent = useCallback(
+    (ev: EventWithRrule, eventId: string) => {
+      const actualId = ev._recurringEventId ?? eventId;
+
       // Optimistic local delete
-      dispatch({ type: 'DELETE_EVENT', id: eventId });
+      dispatch({ type: 'DELETE_EVENT', id: actualId });
 
       addUndoable({
         type: 'DELETE_EVENT',
         description: `已删除「${ev.title}」`,
         undo: () => {
-          dispatch({ type: 'RESTORE_EVENT', event: ev });
+          dispatch({ type: 'RESTORE_EVENT', event: ev as Event });
         },
         commit: () => {
           if (isDemoMode) return;
           const client = getSupabaseClient();
           if (client) {
-            apiSoftDeleteEvent(client, eventId).catch(() => {
-              // If server delete fails, restore the event locally
-              dispatch({ type: 'RESTORE_EVENT', event: ev });
+            apiSoftDeleteEvent(client, actualId).catch(() => {
+              dispatch({ type: 'RESTORE_EVENT', event: ev as Event });
             });
           }
         },
       });
     },
-    [events, isDemoMode, dispatch, addUndoable],
+    [isDemoMode, dispatch, addUndoable],
+  );
+
+  // -----------------------------------------------------------
+  // Handle recurrence delete action choice
+  // -----------------------------------------------------------
+  const handleRecurrenceDeleteAction = useCallback(
+    (action: RecurrenceDeleteAction) => {
+      const inst = pendingRecurringEvent;
+      if (!inst || !inst._recurringEventId || !inst._instanceDate) return;
+
+      setRecurringDialogMode(null);
+      setPendingRecurringEvent(null);
+
+      const parentId = inst._recurringEventId;
+      const parentEvent = rawEvents.find((e) => e.id === parentId);
+      if (!parentEvent) return;
+
+      if (action === 'this') {
+        // Add a skip exception for this instance
+        const newEx: LocalException = {
+          event_id: parentId,
+          original_date: inst._instanceDate,
+          action: 'skip',
+        };
+        setLocalExceptions((prev) => [...prev, newEx]);
+      } else if (action === 'all' || action === 'this_and_future') {
+        // Delete the parent event (removes all instances)
+        doDeleteEvent(parentEvent, parentId);
+      }
+    },
+    [pendingRecurringEvent, rawEvents, doDeleteEvent],
   );
 
   // -----------------------------------------------------------
@@ -225,8 +388,15 @@ export default function MainArea() {
     async (data: EventFormData, eventId?: string) => {
       const now = new Date().toISOString();
 
-      if (eventId) {
-        // Update existing event
+      // Check if this is saving a "modify this instance" exception
+      const expandedEvent = eventId
+        ? (events.find((e) => e.id === eventId) as EventWithRrule | undefined)
+        : undefined;
+      const isInstanceEdit =
+        !!expandedEvent?._recurringEventId && !!expandedEvent?._instanceDate;
+
+      if (isInstanceEdit && expandedEvent) {
+        // Write a modify exception locally
         const startISO = data.isAllDay
           ? new Date(`${data.startDate}T00:00:00`).toISOString()
           : buildDateTimeISO(data.startDate, data.startTime);
@@ -234,7 +404,42 @@ export default function MainArea() {
           ? new Date(`${data.endDate}T23:59:59`).toISOString()
           : buildDateTimeISO(data.endDate, data.endTime);
 
-        const localUpdates: Partial<Event> = {
+        const newEx: LocalException = {
+          event_id: expandedEvent._recurringEventId!,
+          original_date: expandedEvent._instanceDate!,
+          action: 'modify',
+          modified_title: data.title,
+          modified_start_time: startISO,
+          modified_end_time: endISO,
+        };
+        setLocalExceptions((prev) => {
+          // Replace existing exception for same date if any
+          const filtered = prev.filter(
+            (e) =>
+              !(
+                e.event_id === newEx.event_id &&
+                e.original_date === newEx.original_date
+              ),
+          );
+          return [...filtered, newEx];
+        });
+        setFormOpen(false);
+        setEditingEvent(null);
+        return;
+      }
+
+      if (eventId && !isInstanceEdit) {
+        // Update existing event (find the real event, not an instance)
+        const realEventId = expandedEvent?._recurringEventId ?? eventId;
+
+        const startISO = data.isAllDay
+          ? new Date(`${data.startDate}T00:00:00`).toISOString()
+          : buildDateTimeISO(data.startDate, data.startTime);
+        const endISO = data.isAllDay
+          ? new Date(`${data.endDate}T23:59:59`).toISOString()
+          : buildDateTimeISO(data.endDate, data.endTime);
+
+        const localUpdates: Partial<EventWithRrule> = {
           title: data.title,
           description: data.description || null,
           location: data.location || null,
@@ -244,16 +449,29 @@ export default function MainArea() {
           calendar_id: data.calendarId,
           color: data.color,
           updated_at: now,
+          rrule_string: data.rruleString ?? undefined,
         };
 
         if (isDemoMode) {
-          const existing = events.find((e) => e.id === eventId);
+          const existing = rawEvents.find((e) => e.id === realEventId);
           if (existing) {
-            dispatch({ type: 'UPDATE_EVENT', event: { ...existing, ...localUpdates } });
+            dispatch({ type: 'UPDATE_EVENT', event: { ...existing, ...localUpdates } as Event });
           }
         } else {
           const client = getSupabaseClient();
           if (client) {
+            // Handle recurrence rule creation/update
+            let recurrenceRuleId: string | null = null;
+            if (data.rruleString) {
+              const ruleResult = await apiCreateRecurrenceRule(client, {
+                user_id: state.userId!,
+                rrule_string: data.rruleString,
+              });
+              if (ruleResult.data) {
+                recurrenceRuleId = ruleResult.data.id;
+              }
+            }
+
             const apiUpdates = {
               title: data.title,
               description: data.description || '',
@@ -263,12 +481,13 @@ export default function MainArea() {
               is_all_day: data.isAllDay,
               calendar_id: data.calendarId,
               color: data.color,
+              recurrence_rule_id: recurrenceRuleId,
               updated_at: now,
             };
-            const result = await apiUpdateEvent(client, eventId, apiUpdates);
+            const result = await apiUpdateEvent(client, realEventId, apiUpdates);
             if (result.data) {
               dispatch({ type: 'UPDATE_EVENT', event: result.data as unknown as Event });
-              await setRemindersForEvent(client, eventId, data.reminderOffsets);
+              await setRemindersForEvent(client, realEventId, data.reminderOffsets);
             }
           }
         }
@@ -281,7 +500,7 @@ export default function MainArea() {
           ? new Date(`${data.endDate}T23:59:59`).toISOString()
           : buildDateTimeISO(data.endDate, data.endTime);
 
-        const newEvent: Event = {
+        const newEvent: EventWithRrule = {
           id: nextDemoId(),
           user_id: state.userId ?? 'demo',
           calendar_id: data.calendarId,
@@ -296,13 +515,25 @@ export default function MainArea() {
           deleted_at: null,
           created_at: now,
           updated_at: now,
+          rrule_string: data.rruleString ?? undefined,
         };
 
         if (isDemoMode) {
-          dispatch({ type: 'ADD_EVENT', event: newEvent });
+          dispatch({ type: 'ADD_EVENT', event: newEvent as Event });
         } else {
           const client = getSupabaseClient();
           if (client) {
+            let recurrenceRuleId: string | null = null;
+            if (data.rruleString) {
+              const ruleResult = await apiCreateRecurrenceRule(client, {
+                user_id: state.userId!,
+                rrule_string: data.rruleString,
+              });
+              if (ruleResult.data) {
+                recurrenceRuleId = ruleResult.data.id;
+              }
+            }
+
             const result = await apiCreateEvent(client, {
               user_id: state.userId!,
               calendar_id: data.calendarId,
@@ -313,6 +544,7 @@ export default function MainArea() {
               end_time: endISO,
               is_all_day: data.isAllDay,
               color: data.color,
+              recurrence_rule_id: recurrenceRuleId,
             });
             if (result.data) {
               dispatch({ type: 'ADD_EVENT', event: result.data as unknown as Event });
@@ -325,7 +557,7 @@ export default function MainArea() {
       setFormOpen(false);
       setEditingEvent(null);
     },
-    [isDemoMode, events, state.userId, dispatch],
+    [isDemoMode, events, rawEvents, state.userId, dispatch],
   );
 
   // -----------------------------------------------------------
@@ -333,11 +565,17 @@ export default function MainArea() {
   // -----------------------------------------------------------
   const handleEventMove = useCallback(
     (eventId: string, newStartMinutes: number, dayOffset: number) => {
-      const ev = events.find((e) => e.id === eventId);
+      const ev = events.find((e) => e.id === eventId) as EventWithRrule | undefined;
       if (!ev) return;
 
-      const oldStart = new Date(ev.start_time);
-      const oldEnd = new Date(ev.end_time);
+      // For recurring instances, move affects the parent event in simple demo mode
+      const actualEvent = ev._recurringEventId
+        ? (rawEvents.find((e) => e.id === ev._recurringEventId) as EventWithRrule)
+        : ev;
+      if (!actualEvent) return;
+
+      const oldStart = new Date(actualEvent.start_time);
+      const oldEnd = new Date(actualEvent.end_time);
       const duration = oldEnd.getTime() - oldStart.getTime();
 
       const newStart = addDays(new Date(oldStart), dayOffset);
@@ -351,32 +589,31 @@ export default function MainArea() {
       };
 
       // Optimistic update
-      const movedEvent = { ...ev, ...moveUpdates };
-      dispatch({ type: 'UPDATE_EVENT', event: movedEvent });
+      const movedEvent = { ...actualEvent, ...moveUpdates };
+      dispatch({ type: 'UPDATE_EVENT', event: movedEvent as Event });
 
       addUndoable({
         type: 'MOVE_EVENT',
-        description: `已移动「${ev.title}」`,
+        description: `已移动「${actualEvent.title}」`,
         undo: () => {
-          dispatch({ type: 'UPDATE_EVENT', event: ev });
+          dispatch({ type: 'UPDATE_EVENT', event: actualEvent as Event });
         },
         commit: () => {
           if (isDemoMode) return;
           const client = getSupabaseClient();
           if (client) {
-            apiUpdateEvent(client, eventId, moveUpdates).then((result) => {
+            apiUpdateEvent(client, actualEvent.id, moveUpdates).then((result) => {
               if (result.data) {
                 dispatch({ type: 'UPDATE_EVENT', event: result.data as unknown as Event });
               }
             }).catch(() => {
-              // Rollback on error
-              dispatch({ type: 'UPDATE_EVENT', event: ev });
+              dispatch({ type: 'UPDATE_EVENT', event: actualEvent as Event });
             });
           }
         },
       });
     },
-    [events, isDemoMode, dispatch, addUndoable],
+    [events, rawEvents, isDemoMode, dispatch, addUndoable],
   );
 
   // -----------------------------------------------------------
@@ -384,10 +621,15 @@ export default function MainArea() {
   // -----------------------------------------------------------
   const handleEventResize = useCallback(
     async (eventId: string, newEndMinutes: number) => {
-      const ev = events.find((e) => e.id === eventId);
+      const ev = events.find((e) => e.id === eventId) as EventWithRrule | undefined;
       if (!ev) return;
 
-      const oldStart = new Date(ev.start_time);
+      const actualEvent = ev._recurringEventId
+        ? (rawEvents.find((e) => e.id === ev._recurringEventId) as EventWithRrule)
+        : ev;
+      if (!actualEvent) return;
+
+      const oldStart = new Date(actualEvent.start_time);
       const newEnd = new Date(oldStart);
       newEnd.setHours(Math.floor(newEndMinutes / 60), newEndMinutes % 60, 0, 0);
 
@@ -399,18 +641,18 @@ export default function MainArea() {
       };
 
       if (isDemoMode) {
-        dispatch({ type: 'UPDATE_EVENT', event: { ...ev, ...resizeUpdates } });
+        dispatch({ type: 'UPDATE_EVENT', event: { ...actualEvent, ...resizeUpdates } as Event });
       } else {
         const client = getSupabaseClient();
         if (client) {
-          const result = await apiUpdateEvent(client, eventId, resizeUpdates);
+          const result = await apiUpdateEvent(client, actualEvent.id, resizeUpdates);
           if (result.data) {
             dispatch({ type: 'UPDATE_EVENT', event: result.data as unknown as Event });
           }
         }
       }
     },
-    [events, isDemoMode, dispatch],
+    [events, rawEvents, isDemoMode, dispatch],
   );
 
   // -----------------------------------------------------------
@@ -556,7 +798,6 @@ export default function MainArea() {
           const client = getSupabaseClient();
           if (client) {
             apiSoftDeleteTodo(client, todoId).catch(() => {
-              // If server delete fails, restore the todo locally
               dispatch({ type: 'RESTORE_TODO', todo });
             });
           }
@@ -575,7 +816,7 @@ export default function MainArea() {
         return (
           <DayView
             currentDate={state.currentDate}
-            events={events}
+            events={events as Event[]}
             calendars={calendars}
             onCreateEvent={handleCreateEvent}
             onEventClick={handleEventClick}
@@ -587,7 +828,7 @@ export default function MainArea() {
         return (
           <WeekView
             currentDate={state.currentDate}
-            events={events}
+            events={events as Event[]}
             calendars={calendars}
             onCreateEvent={handleCreateEvent}
             onEventClick={handleEventClick}
@@ -599,7 +840,7 @@ export default function MainArea() {
         return (
           <MonthView
             currentDate={state.currentDate}
-            events={events}
+            events={events as Event[]}
             calendars={calendars}
             todos={todos}
           />
@@ -608,7 +849,7 @@ export default function MainArea() {
         return (
           <AgendaView
             currentDate={state.currentDate}
-            events={events}
+            events={events as Event[]}
             calendars={calendars}
             todos={todos}
           />
@@ -658,14 +899,31 @@ export default function MainArea() {
       {/* Event preview popover */}
       {previewEvent && previewRect && (
         <EventPreview
-          event={previewEvent}
+          event={previewEvent as Event}
           calendar={calendarMap.get(previewEvent.calendar_id)}
           anchorRect={previewRect}
+          isRecurring={!!previewEvent._recurringEventId}
           onEdit={handleEditFromPreview}
           onDelete={handleDeleteEvent}
           onClose={() => {
             setPreviewEvent(null);
             setPreviewRect(null);
+          }}
+        />
+      )}
+
+      {/* Recurrence action dialog */}
+      {recurringDialogMode && (
+        <RecurrenceActionDialog
+          mode={recurringDialogMode}
+          onConfirm={
+            recurringDialogMode === 'edit'
+              ? handleRecurrenceEditAction
+              : handleRecurrenceDeleteAction
+          }
+          onCancel={() => {
+            setRecurringDialogMode(null);
+            setPendingRecurringEvent(null);
           }}
         />
       )}

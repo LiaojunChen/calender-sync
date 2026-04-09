@@ -63,6 +63,13 @@
   flex-shrink: 0;
 }
 
+.recurringBadge {
+  font-size: 11px;
+  color: var(--accent-primary);
+  margin-top: 4px;
+  margin-bottom: 4px;
+}
+
 .calendarBadge {
   display: inline-flex;
   align-items: center;

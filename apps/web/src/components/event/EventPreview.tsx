@@ -10,6 +10,8 @@ interface EventPreviewProps {
   calendar: Calendar | undefined;
   /** Anchor rect from the clicked event block */
   anchorRect: DOMRect;
+  /** Whether this event is a recurring instance */
+  isRecurring?: boolean;
   onEdit: (event: Event) => void;
   onDelete: (eventId: string) => void;
   onClose: () => void;
@@ -19,6 +21,7 @@ export default function EventPreview({
   event,
   calendar,
   anchorRect,
+  isRecurring = false,
   onEdit,
   onDelete,
   onClose,
@@ -93,6 +96,13 @@ export default function EventPreview({
             <div className={styles.time}>{timeText}</div>
           </div>
         </div>
+
+        {/* Recurring badge */}
+        {isRecurring && (
+          <div className={styles.recurringBadge}>
+            ↻ 重复事件
+          </div>
+        )}
 
         {event.location && (
           <div className={styles.detail}>

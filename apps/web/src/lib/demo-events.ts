@@ -1,5 +1,6 @@
 import type { Event, Calendar, Todo } from '@project-calendar/shared';
 import { addDays, startOfWeek, toISODateString } from '@project-calendar/shared';
+import type { EventWithRrule } from '@/hooks/useExpandedEvents';
 
 /**
  * Demo calendars for offline / unauthenticated mode.
@@ -45,7 +46,7 @@ export const DEMO_CALENDARS: Calendar[] = [
  * Returns events spread across the current week so there is always
  * something visible in both day and week views.
  */
-export function generateDemoEvents(referenceDate: Date): Event[] {
+export function generateDemoEvents(referenceDate: Date): EventWithRrule[] {
   const now = new Date();
   const weekStart = startOfWeek(referenceDate, 1); // Monday
 
@@ -57,7 +58,7 @@ export function generateDemoEvents(referenceDate: Date): Event[] {
 
   const todayDow = (referenceDate.getDay() + 6) % 7; // Monday=0..Sunday=6
 
-  const events: Event[] = [
+  const events: EventWithRrule[] = [
     // All-day event spanning 3 days (Mon-Wed)
     {
       id: 'demo-1',
@@ -193,6 +194,60 @@ export function generateDemoEvents(referenceDate: Date): Event[] {
       deleted_at: null,
       created_at: now.toISOString(),
       updated_at: now.toISOString(),
+    },
+    // Recurring: daily standup (weekdays, 09:30–10:00)
+    {
+      id: 'demo-recurring-standup',
+      user_id: 'demo',
+      calendar_id: 'cal-work',
+      title: '每日站会',
+      description: '每天早上同步工作进展',
+      location: null,
+      start_time: makeDate(0, 9, 30),
+      end_time: makeDate(0, 10, 0),
+      is_all_day: false,
+      color: '#7986cb',
+      recurrence_rule_id: null,
+      deleted_at: null,
+      created_at: now.toISOString(),
+      updated_at: now.toISOString(),
+      rrule_string: 'FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR',
+    },
+    // Recurring: weekly team meeting (Monday 14:00–15:00)
+    {
+      id: 'demo-recurring-team-meeting',
+      user_id: 'demo',
+      calendar_id: 'cal-work',
+      title: '周会',
+      description: '团队周例会',
+      location: '二楼会议室',
+      start_time: makeDate(0, 14, 0),
+      end_time: makeDate(0, 15, 0),
+      is_all_day: false,
+      color: null,
+      recurrence_rule_id: null,
+      deleted_at: null,
+      created_at: now.toISOString(),
+      updated_at: now.toISOString(),
+      rrule_string: 'FREQ=WEEKLY;BYDAY=MO',
+    },
+    // Recurring: monthly review (first day of week, 16:00–17:00)
+    {
+      id: 'demo-recurring-monthly-review',
+      user_id: 'demo',
+      calendar_id: 'cal-personal',
+      title: '月度复盘',
+      description: '回顾本月目标完成情况',
+      location: null,
+      start_time: makeDate(0, 16, 0),
+      end_time: makeDate(0, 17, 0),
+      is_all_day: false,
+      color: '#33b679',
+      recurrence_rule_id: null,
+      deleted_at: null,
+      created_at: now.toISOString(),
+      updated_at: now.toISOString(),
+      rrule_string: 'FREQ=MONTHLY',
     },
   ];
 
