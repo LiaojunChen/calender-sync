@@ -56,7 +56,7 @@ export interface AppState {
   searchQuery: string;
 }
 
-type AppAction =
+export type AppAction =
   | { type: 'SET_VIEW'; view: ViewType }
   | { type: 'SET_DATE'; date: Date }
   | { type: 'SET_SIDEBAR_OPEN'; open: boolean }

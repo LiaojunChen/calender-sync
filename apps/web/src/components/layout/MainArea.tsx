@@ -20,6 +20,7 @@ import {
 import type { Event, Calendar, Todo } from '@project-calendar/shared';
 import { addDays, startOfMonth, endOfMonth, addMonths, startOfWeek, endOfWeek } from '@project-calendar/shared';
 import { useUndo } from '@/hooks/useUndo';
+import { useRealtimeSync } from '@/hooks/useRealtimeSync';
 import {
   useExpandedEvents,
   type EventWithRrule,
@@ -105,6 +106,13 @@ export default function MainArea() {
 
   // Undo / Snackbar
   const { addUndoable, undoLast, dismissSnackbar, snackbarState } = useUndo();
+
+  // Realtime sync: keep local state in sync with server changes
+  useRealtimeSync(
+    state.isAuthenticated ? getSupabaseClient() : null,
+    state.userId,
+    dispatch,
+  );
 
   // Use real calendars if available, fall back to demo
   const calendars = state.calendars.length > 0 ? state.calendars : DEMO_CALENDARS;

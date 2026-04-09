@@ -32,6 +32,7 @@ import {
   cancelAllScheduledNotifications,
   scheduleNotificationsForItems,
 } from '../notifications/scheduler';
+import { broadcastWidgetRefresh } from '../widget/widgetDataBridge';
 
 // ---------------------------------------------------------------------------
 // View type (mirrors DrawerNavigator)
@@ -221,18 +222,22 @@ export default function CalendarScreen({
   const [todos] = useState<Todo[]>(MOCK_TODOS);
   const [calendars] = useState<Calendar[]>(MOCK_CALENDARS);
 
-  // Reschedule notifications whenever data changes
+  // Reschedule notifications and refresh widget whenever data changes
   useEffect(() => {
     void (async () => {
       await cancelAllScheduledNotifications();
       await scheduleNotificationsForItems(events, todos, calendars);
+      // Keep the home-screen widget in sync after any data change
+      // (covers: event create/edit/delete, todo toggle, pull-to-refresh)
+      await broadcastWidgetRefresh(events, todos, calendars);
     })();
   }, [events, todos, calendars]);
 
   // Refresh handler
   const handleRefresh = useCallback(() => {
     setRefreshing(true);
-    // Simulate async data refresh (replace with real Supabase query in Task 11)
+    // Simulate async data refresh (replace with real Supabase query in Task 11).
+    // broadcastWidgetRefresh is called automatically by the data-change effect above.
     setTimeout(() => {
       setRefreshing(false);
     }, 600);
