@@ -1,0 +1,41 @@
+.allDayArea {
+  display: flex;
+  border-bottom: 1px solid var(--border-color);
+  min-height: 28px;
+}
+
+.timeLabel {
+  width: 60px;
+  min-width: 60px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  padding: 4px 8px 4px 0;
+  font-size: 10px;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+}
+
+.columns {
+  flex: 1;
+  display: flex;
+}
+
+.column {
+  flex: 1;
+  position: relative;
+  padding: 2px 2px;
+  min-height: 24px;
+  border-left: 1px solid var(--border-light);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.column:first-child {
+  border-left: none;
+}
+
+.columnToday {
+  background-color: rgba(26, 115, 232, 0.05);
+}

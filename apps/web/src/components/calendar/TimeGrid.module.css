@@ -1,0 +1,151 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.headerRow {
+  display: flex;
+  border-bottom: 1px solid var(--border-color);
+  flex-shrink: 0;
+}
+
+.headerTimeLabel {
+  width: 60px;
+  min-width: 60px;
+}
+
+.headerColumns {
+  display: flex;
+  flex: 1;
+}
+
+.headerCell {
+  flex: 1;
+  text-align: center;
+  padding: 8px 0 4px;
+  border-left: 1px solid var(--border-light);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.headerCell:first-child {
+  border-left: none;
+}
+
+.headerDayName {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+.headerDayNameToday {
+  color: var(--accent-primary);
+}
+
+.headerDateNum {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  font-weight: 400;
+  color: var(--text-primary);
+}
+
+.headerDateNumToday {
+  background-color: #1a73e8;
+  color: #ffffff;
+  font-weight: 500;
+}
+
+.scrollArea {
+  flex: 1;
+  overflow-y: auto;
+  position: relative;
+}
+
+.gridBody {
+  display: flex;
+  position: relative;
+}
+
+.timeLabels {
+  width: 60px;
+  min-width: 60px;
+  position: relative;
+}
+
+.timeLabel {
+  position: absolute;
+  right: 8px;
+  font-size: 10px;
+  color: var(--text-tertiary);
+  transform: translateY(-50%);
+  white-space: nowrap;
+}
+
+.columnsContainer {
+  flex: 1;
+  display: flex;
+  position: relative;
+}
+
+.dayColumn {
+  flex: 1;
+  position: relative;
+  border-left: 1px solid var(--border-light);
+}
+
+.dayColumn:first-child {
+  border-left: none;
+}
+
+.dayColumnToday {
+  background-color: rgba(26, 115, 232, 0.05);
+}
+
+/* Hour lines (solid) */
+.hourLine {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 0;
+  border-top: 1px solid #dadce0;
+}
+
+/* Half-hour lines (dashed / lighter) */
+.halfHourLine {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 0;
+  border-top: 1px dashed #f1f3f4;
+}
+
+/* Current time indicator */
+.currentTimeLine {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 0;
+  border-top: 2px solid #ea4335;
+  z-index: 10;
+  pointer-events: none;
+}
+
+.currentTimeDot {
+  position: absolute;
+  left: -5px;
+  top: -5px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background-color: #ea4335;
+}
