@@ -99,8 +99,8 @@ export interface Reminder {
 export interface UserSettings {
   id: string;
   user_id: string;
-  default_view: 'day' | 'week' | 'month';
-  week_start_day: 0 | 1 | 2 | 3 | 4 | 5 | 6; // 0 = Sunday, 1 = Monday, etc.
+  default_view: 'day' | 'week' | 'month' | 'agenda';
+  week_start_day: 'monday' | 'sunday';
   default_reminder_offsets: number[];
   default_event_duration: number; // in minutes
   theme: 'light' | 'dark' | 'system';
