@@ -2,12 +2,13 @@
 
 import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import type { Event, Todo, Calendar } from '@project-calendar/shared';
+import { searchEventsAndTodos } from '@project-calendar/shared';
 import { useAppContext } from '@/contexts/AppContext';
 import { getSupabaseClient } from '@/lib/supabase';
 import styles from './SearchPanel.module.css';
 
 // ============================================================
-// Helpers
+// Local display helpers (for subtitle formatting in the UI)
 // ============================================================
 
 function formatEventTime(event: Event): string {
@@ -31,13 +32,8 @@ function formatTodoTime(todo: Todo): string {
   return datePart;
 }
 
-function matchesQuery(text: string | null | undefined, query: string): boolean {
-  if (!text) return false;
-  return text.toLowerCase().includes(query.toLowerCase());
-}
-
 // ============================================================
-// Search result types
+// Search result types (UI-layer, richer than shared SearchResult)
 // ============================================================
 
 type SearchResultEvent = {
@@ -105,54 +101,50 @@ export default function SearchPanel({ onClose }: SearchPanelProps) {
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [onClose]);
 
-  // Search logic
+  // Search logic — use shared searchEventsAndTodos for filtering, then map
+  // to the richer UI-layer result type that carries the original item and color.
   const results = useMemo<SearchResult[]>(() => {
     const q = searchQuery.trim();
     if (!q) return [];
 
-    const eventResults: SearchResultEvent[] = events
-      .filter(
-        (ev) =>
-          !ev.deleted_at &&
-          (matchesQuery(ev.title, q) ||
-            matchesQuery(ev.description, q) ||
-            matchesQuery(ev.location, q))
-      )
-      .map((ev) => ({
-        kind: 'event' as const,
-        id: ev.id,
-        title: ev.title,
-        subtitle: formatEventTime(ev),
-        color: ev.color ?? calendarColorMap.get(ev.calendar_id) ?? '#1a73e8',
-        date: new Date(ev.start_time),
-        event: ev,
-      }));
+    // Build a lookup map from id to original Event / Todo for the UI layer
+    const eventMap = new Map<string, Event>(events.map((ev) => [ev.id, ev]));
+    const todoMap = new Map<string, Todo>(todos.map((t) => [t.id, t]));
 
-    const todoResults: SearchResultTodo[] = todos
-      .filter(
-        (todo) =>
-          !todo.deleted_at &&
-          (matchesQuery(todo.title, q) || matchesQuery(todo.description, q))
-      )
-      .map((todo) => ({
-        kind: 'todo' as const,
-        id: todo.id,
-        title: todo.title,
-        subtitle: formatTodoTime(todo),
-        color: todo.color ?? calendarColorMap.get(todo.calendar_id) ?? '#1a73e8',
-        date: todo.due_date ? new Date(todo.due_date) : null,
-        todo,
-      }));
+    const matched = searchEventsAndTodos(events, todos, searchQuery);
 
-    // Merge and sort: events by start_time ascending, todos with due_date, then null dates
-    const all: SearchResult[] = [...eventResults, ...todoResults];
-    all.sort((a, b) => {
-      const aTime = a.date?.getTime() ?? Infinity;
-      const bTime = b.date?.getTime() ?? Infinity;
-      return aTime - bTime;
-    });
+    const uiResults: SearchResult[] = [];
+    for (const sr of matched) {
+      if (sr.type === 'event') {
+        const ev = eventMap.get(sr.id);
+        if (!ev) continue;
+        const item: SearchResultEvent = {
+          kind: 'event',
+          id: ev.id,
+          title: ev.title,
+          subtitle: formatEventTime(ev),
+          color: ev.color ?? calendarColorMap.get(ev.calendar_id) ?? '#1a73e8',
+          date: new Date(ev.start_time),
+          event: ev,
+        };
+        uiResults.push(item);
+      } else {
+        const todo = todoMap.get(sr.id);
+        if (!todo) continue;
+        const item: SearchResultTodo = {
+          kind: 'todo',
+          id: todo.id,
+          title: todo.title,
+          subtitle: formatTodoTime(todo),
+          color: todo.color ?? calendarColorMap.get(todo.calendar_id) ?? '#1a73e8',
+          date: todo.due_date ? new Date(todo.due_date) : null,
+          todo,
+        };
+        uiResults.push(item);
+      }
+    }
 
-    return all.slice(0, 50); // limit results
+    return uiResults.slice(0, 50); // limit results
   }, [searchQuery, events, todos, calendarColorMap]);
 
   const handleResultClick = useCallback(

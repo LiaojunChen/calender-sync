@@ -8,3 +8,4 @@ export * from './validators';
 export * from './widgetUtils';
 export * from './recurrence';
 export * from './notificationUtils';
+export * from './searchUtils';
