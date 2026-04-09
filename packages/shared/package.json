@@ -14,10 +14,15 @@
     "./api": "./src/api.ts"
   },
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
   },
   "devDependencies": {
-    "typescript": "^5.4.0"
+    "@vitest/coverage-v8": "^4.1.4",
+    "typescript": "^5.4.0",
+    "vitest": "^4.1.4"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.103.0"
