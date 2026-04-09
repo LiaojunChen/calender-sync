@@ -28,6 +28,7 @@ import {
 } from '@project-calendar/shared';
 import type { CalendarRow, TodoInsert, TodoUpdate } from '@project-calendar/shared';
 import { supabase } from '../lib/supabase';
+import { DEFAULT_REMINDER_OFFSETS } from '../notifications/scheduler';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -65,7 +66,10 @@ export default function TodoFormScreen(): React.JSX.Element {
   const [dueDate, setDueDate] = useState('');
   const [dueTime, setDueTime] = useState('');
   const [calendarId, setCalendarId] = useState('');
-  const [reminderOffsets, setReminderOffsets] = useState<number[]>([]);
+  // New todos start with default reminder offsets; editing overwrites from DB
+  const [reminderOffsets, setReminderOffsets] = useState<number[]>(
+    isEditing ? [] : [...DEFAULT_REMINDER_OFFSETS],
+  );
 
   // ---- meta state ----
   const [calendars, setCalendars] = useState<CalendarRow[]>([]);

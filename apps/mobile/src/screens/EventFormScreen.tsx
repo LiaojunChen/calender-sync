@@ -29,6 +29,7 @@ import {
 } from '@project-calendar/shared';
 import type { CalendarRow, EventInsert, EventUpdate } from '@project-calendar/shared';
 import { supabase } from '../lib/supabase';
+import { DEFAULT_REMINDER_OFFSETS } from '../notifications/scheduler';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -146,7 +147,10 @@ export default function EventFormScreen(): React.JSX.Element {
   });
   const [calendarId, setCalendarId] = useState('');
   const [color, setColor] = useState<string | null>(null);
-  const [reminderOffsets, setReminderOffsets] = useState<number[]>([]);
+  // New events start with default reminder offsets; editing overwrites from DB
+  const [reminderOffsets, setReminderOffsets] = useState<number[]>(
+    isEditing ? [] : [...DEFAULT_REMINDER_OFFSETS],
+  );
 
   // ---- meta state ----
   const [calendars, setCalendars] = useState<CalendarRow[]>([]);

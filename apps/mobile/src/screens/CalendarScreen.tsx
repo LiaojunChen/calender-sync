@@ -9,6 +9,7 @@
 
 import React, {
   useCallback,
+  useEffect,
   useMemo,
   useRef,
   useState,
@@ -27,6 +28,10 @@ import DayView from '../components/calendar/DayView';
 import AgendaView from '../components/calendar/AgendaView';
 import type { Calendar, Event, Todo } from '@project-calendar/shared';
 import { addDays, addMonths, startOfWeek } from '@project-calendar/shared';
+import {
+  cancelAllScheduledNotifications,
+  scheduleNotificationsForItems,
+} from '../notifications/scheduler';
 
 // ---------------------------------------------------------------------------
 // View type (mirrors DrawerNavigator)
@@ -215,6 +220,14 @@ export default function CalendarScreen({
   const [events] = useState<Event[]>(MOCK_EVENTS);
   const [todos] = useState<Todo[]>(MOCK_TODOS);
   const [calendars] = useState<Calendar[]>(MOCK_CALENDARS);
+
+  // Reschedule notifications whenever data changes
+  useEffect(() => {
+    void (async () => {
+      await cancelAllScheduledNotifications();
+      await scheduleNotificationsForItems(events, todos, calendars);
+    })();
+  }, [events, todos, calendars]);
 
   // Refresh handler
   const handleRefresh = useCallback(() => {
