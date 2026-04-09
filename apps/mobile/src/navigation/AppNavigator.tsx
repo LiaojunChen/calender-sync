@@ -22,6 +22,7 @@ import DrawerNavigator from './DrawerNavigator';
 import TodoScreen from '../screens/TodoScreen';
 import EventFormScreen from '../screens/EventFormScreen';
 import TodoFormScreen from '../screens/TodoFormScreen';
+import EventDetailScreen from '../screens/EventDetailScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 
 // ---------------------------------------------------------------------------
@@ -31,6 +32,7 @@ import SettingsScreen from '../screens/SettingsScreen';
 export type RootStackParamList = {
   Main: undefined;
   EventForm: { eventId?: string } | undefined;
+  EventDetail: { eventId: string };
   TodoForm: { todoId?: string } | undefined;
   Settings: undefined;
 };
@@ -121,6 +123,13 @@ export default function AppNavigator(): React.JSX.Element {
           title: '新建待办',
           headerStyle: { backgroundColor: colors.card },
           headerTintColor: colors.text,
+        }}
+      />
+      <Stack.Screen
+        name="EventDetail"
+        component={EventDetailScreen}
+        options={{
+          headerShown: false,
         }}
       />
       <Stack.Screen
