@@ -169,7 +169,7 @@ export interface Database {
           user_id: string;
           event_id: string;
           original_date: string;
-          action: string;
+          action: 'skip' | 'modify';
           modified_title: string | null;
           modified_start_time: string | null;
           modified_end_time: string | null;
@@ -185,7 +185,7 @@ export interface Database {
           user_id: string;
           event_id: string;
           original_date: string;
-          action: string;
+          action: 'skip' | 'modify';
           modified_title?: string | null;
           modified_start_time?: string | null;
           modified_end_time?: string | null;
