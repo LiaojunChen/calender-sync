@@ -1,0 +1,192 @@
+.monthView {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Header row with day names */
+.headerRow {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.headerCell {
+  text-align: center;
+  padding: 8px 0;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Grid body */
+.gridBody {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  grid-template-rows: repeat(6, 1fr);
+  overflow-y: auto;
+}
+
+/* Individual date cell */
+.dateCell {
+  min-height: 100px;
+  border-right: 1px solid var(--border-light);
+  border-bottom: 1px solid var(--border-light);
+  padding: 2px;
+  cursor: pointer;
+  transition: background-color 0.15s;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.dateCell:nth-child(7n) {
+  border-right: none;
+}
+
+.dateCell:hover {
+  background-color: var(--bg-hover);
+}
+
+/* Date number header inside cell */
+.dateHeader {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 2px 0 4px;
+}
+
+.dateNumber {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-primary);
+  line-height: 1;
+}
+
+.dateNumberToday {
+  background-color: var(--today-bg);
+  color: var(--today-text);
+  font-weight: 600;
+}
+
+.dateNumberOtherMonth {
+  color: var(--text-tertiary);
+}
+
+/* Events area inside cell */
+.eventsArea {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  overflow: hidden;
+}
+
+/* Single event entry */
+.eventEntry {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-size: 11px;
+  line-height: 1.4;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+
+.eventEntry:hover {
+  filter: brightness(0.95);
+}
+
+.eventDot {
+  width: 6px;
+  height: 6px;
+  min-width: 6px;
+  border-radius: 50%;
+}
+
+.eventTitle {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-primary);
+  font-size: 11px;
+}
+
+.eventTime {
+  color: var(--text-secondary);
+  font-size: 10px;
+  margin-right: 2px;
+  flex-shrink: 0;
+}
+
+/* Multi-day event bar */
+.multiDayBar {
+  display: flex;
+  align-items: center;
+  padding: 1px 6px;
+  font-size: 11px;
+  line-height: 1.4;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #fff;
+  border-radius: 3px;
+  min-height: 18px;
+  cursor: pointer;
+}
+
+.multiDayBar:hover {
+  filter: brightness(0.9);
+}
+
+.multiDayBarTitle {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Continuation bar (no left radius) */
+.multiDayBarContinuation {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+
+/* Ending bar (no right radius when it continues) */
+.multiDayBarContinues {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+/* Spacer for multi-day events that occupy a row but are rendered in an earlier cell */
+.multiDaySpacer {
+  min-height: 18px;
+  visibility: hidden;
+}
+
+/* "+N 更多" link */
+.moreLink {
+  font-size: 11px;
+  color: var(--text-secondary);
+  padding: 1px 4px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.moreLink:hover {
+  color: var(--accent-primary);
+  text-decoration: underline;
+}

@@ -239,7 +239,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         newDate = addMonthsToDate(currentDate, -1);
         break;
       case 'agenda':
-        newDate = addDaysToDate(currentDate, -7);
+        newDate = addMonthsToDate(currentDate, -1);
         break;
       default:
         newDate = currentDate;
@@ -261,7 +261,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         newDate = addMonthsToDate(currentDate, 1);
         break;
       case 'agenda':
-        newDate = addDaysToDate(currentDate, 7);
+        newDate = addMonthsToDate(currentDate, 1);
         break;
       default:
         newDate = currentDate;
