@@ -7,3 +7,4 @@ export * from './api';
 export * from './validators';
 export * from './widgetUtils';
 export * from './recurrence';
+export * from './notificationUtils';
