@@ -1,5 +1,5 @@
-import type { Event, Calendar } from '@project-calendar/shared';
-import { addDays, startOfWeek } from '@project-calendar/shared';
+import type { Event, Calendar, Todo } from '@project-calendar/shared';
+import { addDays, startOfWeek, toISODateString } from '@project-calendar/shared';
 
 /**
  * Demo calendars for offline / unauthenticated mode.
@@ -197,4 +197,100 @@ export function generateDemoEvents(referenceDate: Date): Event[] {
   ];
 
   return events;
+}
+
+/**
+ * Generate demo todos relative to a reference date (typically today).
+ */
+export function generateDemoTodos(referenceDate: Date): Todo[] {
+  const now = new Date();
+  const weekStart = startOfWeek(referenceDate, 1); // Monday
+
+  function makeDate(dayOffset: number): string {
+    const d = addDays(weekStart, dayOffset);
+    return toISODateString(d);
+  }
+
+  const todayDow = (referenceDate.getDay() + 6) % 7; // Monday=0..Sunday=6
+  const todayStr = toISODateString(referenceDate);
+
+  const todos: Todo[] = [
+    {
+      id: 'demo-todo-1',
+      user_id: 'demo',
+      calendar_id: 'cal-study',
+      title: '预习操作系统课程',
+      description: '第五章：内存管理',
+      due_date: todayStr,
+      due_time: '09:00:00',
+      is_completed: false,
+      completed_at: null,
+      color: null,
+      deleted_at: null,
+      created_at: now.toISOString(),
+      updated_at: now.toISOString(),
+    },
+    {
+      id: 'demo-todo-2',
+      user_id: 'demo',
+      calendar_id: 'cal-work',
+      title: '提交周报',
+      description: '整理本周工作进展',
+      due_date: makeDate(todayDow),
+      due_time: '18:00:00',
+      is_completed: false,
+      completed_at: null,
+      color: null,
+      deleted_at: null,
+      created_at: now.toISOString(),
+      updated_at: now.toISOString(),
+    },
+    {
+      id: 'demo-todo-3',
+      user_id: 'demo',
+      calendar_id: 'cal-personal',
+      title: '买生日蛋糕',
+      description: null,
+      due_date: makeDate(todayDow + 1),
+      due_time: null,
+      is_completed: false,
+      completed_at: null,
+      color: null,
+      deleted_at: null,
+      created_at: now.toISOString(),
+      updated_at: now.toISOString(),
+    },
+    {
+      id: 'demo-todo-4',
+      user_id: 'demo',
+      calendar_id: 'cal-study',
+      title: '完成数据结构作业',
+      description: '第三题：二叉树遍历',
+      due_date: makeDate(2),
+      due_time: '23:59:00',
+      is_completed: true,
+      completed_at: now.toISOString(),
+      color: null,
+      deleted_at: null,
+      created_at: now.toISOString(),
+      updated_at: now.toISOString(),
+    },
+    {
+      id: 'demo-todo-5',
+      user_id: 'demo',
+      calendar_id: 'cal-work',
+      title: '整理项目需求文档',
+      description: '与产品经理对齐需求',
+      due_date: makeDate(4),
+      due_time: '15:00:00',
+      is_completed: false,
+      completed_at: null,
+      color: null,
+      deleted_at: null,
+      created_at: now.toISOString(),
+      updated_at: now.toISOString(),
+    },
+  ];
+
+  return todos;
 }

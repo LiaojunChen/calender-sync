@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useMemo, useCallback } from 'react';
-import type { Event, Calendar } from '@project-calendar/shared';
+import type { Event, Calendar, Todo } from '@project-calendar/shared';
 import {
   startOfMonth,
   endOfMonth,
@@ -23,6 +23,7 @@ interface MonthViewProps {
   currentDate: Date;
   events: Event[];
   calendars: Calendar[];
+  todos?: Todo[];
 }
 
 // ----------------------------------------------------------------
@@ -78,7 +79,7 @@ function getSpan(
 // Component
 // ----------------------------------------------------------------
 
-export default function MonthView({ currentDate, events, calendars }: MonthViewProps) {
+export default function MonthView({ currentDate, events, calendars, todos = [] }: MonthViewProps) {
   const { setView, setDate } = useAppContext();
 
   const calendarMap = useMemo(() => {
@@ -121,6 +122,19 @@ export default function MonthView({ currentDate, events, calendars }: MonthViewP
       return evStart < gridEnd && evEnd > gridStart;
     });
   }, [events, gridDates, visibleCalendarIds]);
+
+  // Filter todos for the visible grid
+  const filteredTodos = useMemo(() => {
+    const gridStartStr = gridDates[0].toISOString().substring(0, 10);
+    const gridEndStr = gridDates[41].toISOString().substring(0, 10);
+
+    return todos.filter((t) => {
+      if (t.deleted_at) return false;
+      if (!t.due_date) return false;
+      if (!visibleCalendarIds.has(t.calendar_id)) return false;
+      return t.due_date >= gridStartStr && t.due_date <= gridEndStr;
+    });
+  }, [todos, gridDates, visibleCalendarIds]);
 
   // Separate multi-day and single-day events
   const { multiDayEvents, singleDayEvents } = useMemo(() => {
@@ -266,12 +280,18 @@ export default function MonthView({ currentDate, events, calendars }: MonthViewP
         }
       }
 
+      // Todos for this date
+      const dateStr = date.toISOString().substring(0, 10);
+      const dayTodos = filteredTodos.filter((t) => t.due_date === dateStr);
+
       // Total items for overflow calculation
       const multiDayCount = barsInCol.length;
-      const totalItems = multiDayCount + dayEvents.length;
+      const totalItems = multiDayCount + dayEvents.length + dayTodos.length;
       const remainingSlots = Math.max(0, MAX_VISIBLE_EVENTS - (maxBarRow + 1));
       const visibleDayEvents = dayEvents.slice(0, remainingSlots);
-      const overflowCount = totalItems - (maxBarRow + 1) - visibleDayEvents.length;
+      const remainingSlotsAfterEvents = Math.max(0, remainingSlots - visibleDayEvents.length);
+      const visibleDayTodos = dayTodos.slice(0, remainingSlotsAfterEvents);
+      const overflowCount = totalItems - (maxBarRow + 1) - visibleDayEvents.length - visibleDayTodos.length;
 
       const dateNumberClasses = [
         styles.dateNumber,
@@ -304,6 +324,35 @@ export default function MonthView({ currentDate, events, calendars }: MonthViewP
                   <span className={styles.eventDot} style={{ backgroundColor: color }} />
                   <span className={styles.eventTime}>{formatTime(evStart)}</span>
                   <span className={styles.eventTitle}>{ev.title}</span>
+                </div>
+              );
+            })}
+            {visibleDayTodos.map((todo) => {
+              const todoColor = todo.color ?? calendarMap.get(todo.calendar_id)?.color ?? '#1a73e8';
+              return (
+                <div
+                  key={todo.id}
+                  className={styles.todoEntry}
+                  title={todo.title}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <svg
+                    className={styles.todoCheckIcon}
+                    viewBox="0 0 14 14"
+                    width="11"
+                    height="11"
+                    style={{ flexShrink: 0 }}
+                  >
+                    {todo.is_completed ? (
+                      <>
+                        <rect x="0.5" y="0.5" width="13" height="13" rx="2" fill={todoColor} />
+                        <path d="M3 7l2.5 2.5L11 5" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+                      </>
+                    ) : (
+                      <rect x="0.5" y="0.5" width="13" height="13" rx="2" fill="none" stroke={todoColor} strokeWidth="1.2" />
+                    )}
+                  </svg>
+                  <span className={styles.todoEntryTitle}>{todo.title}</span>
                 </div>
               );
             })}

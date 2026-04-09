@@ -1,8 +1,24 @@
 .mainArea {
   flex: 1;
   height: calc(100vh - var(--topbar-height));
-  overflow-y: auto;
+  overflow: hidden;
   background: var(--bg-primary);
+  display: flex;
+}
+
+.viewArea {
+  flex: 1;
+  overflow-y: auto;
+  min-width: 0;
+}
+
+.todoPanelWrapper {
+  width: 300px;
+  min-width: 260px;
+  max-width: 360px;
+  height: 100%;
+  overflow: hidden;
+  flex-shrink: 0;
 }
 
 .placeholder {

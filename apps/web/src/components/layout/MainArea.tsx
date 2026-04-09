@@ -9,8 +9,14 @@ import {
   softDeleteEvent as apiSoftDeleteEvent,
   getEvents as apiGetEvents,
   setRemindersForEvent,
+  createTodo as apiCreateTodo,
+  updateTodo as apiUpdateTodo,
+  softDeleteTodo as apiSoftDeleteTodo,
+  toggleTodoCompleted as apiToggleTodoCompleted,
+  getTodos as apiGetTodos,
+  setRemindersForTodo,
 } from '@project-calendar/shared';
-import type { Event, Calendar } from '@project-calendar/shared';
+import type { Event, Calendar, Todo } from '@project-calendar/shared';
 import { addDays } from '@project-calendar/shared';
 import DayView from '@/components/calendar/DayView';
 import WeekView from '@/components/calendar/WeekView';
@@ -18,8 +24,11 @@ import MonthView from '@/components/calendar/MonthView';
 import AgendaView from '@/components/calendar/AgendaView';
 import EventForm from '@/components/event/EventForm';
 import EventPreview from '@/components/event/EventPreview';
+import TodoForm from '@/components/todo/TodoForm';
+import TodoList from '@/components/todo/TodoList';
 import type { EventFormData } from '@/components/event/EventForm';
-import { generateDemoEvents, DEMO_CALENDARS } from '@/lib/demo-events';
+import type { TodoFormData } from '@/components/todo/TodoForm';
+import { generateDemoEvents, generateDemoTodos, DEMO_CALENDARS } from '@/lib/demo-events';
 import styles from './MainArea.module.css';
 
 // ============================================================
@@ -29,6 +38,11 @@ import styles from './MainArea.module.css';
 let demoIdCounter = 100;
 function nextDemoId(): string {
   return `demo-local-${++demoIdCounter}`;
+}
+
+let demoTodoIdCounter = 200;
+function nextDemoTodoId(): string {
+  return `demo-todo-local-${++demoTodoIdCounter}`;
 }
 
 function buildDateTimeISO(dateStr: string, timeStr: string): string {
@@ -54,6 +68,14 @@ export default function MainArea() {
     }
   }, [isDemoMode]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Todos: initialize with demo todos in demo mode
+  useEffect(() => {
+    if (isDemoMode && state.todos.length === 0) {
+      const demoTodos = generateDemoTodos(state.currentDate);
+      dispatch({ type: 'SET_TODOS', todos: demoTodos });
+    }
+  }, [isDemoMode]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Fetch events from Supabase when authenticated
   useEffect(() => {
     if (isDemoMode || !state.isAuthenticated) return;
@@ -68,7 +90,22 @@ export default function MainArea() {
     })();
   }, [isDemoMode, state.isAuthenticated, dispatch]);
 
+  // Fetch todos from Supabase when authenticated
+  useEffect(() => {
+    if (isDemoMode || !state.isAuthenticated) return;
+    const client = getSupabaseClient();
+    if (!client) return;
+
+    (async () => {
+      const result = await apiGetTodos(client);
+      if (result.data) {
+        dispatch({ type: 'SET_TODOS', todos: result.data as unknown as Todo[] });
+      }
+    })();
+  }, [isDemoMode, state.isAuthenticated, dispatch]);
+
   const events = state.events;
+  const todos = state.todos;
 
   // Calendar map
   const calendarMap = useMemo(() => {
@@ -92,6 +129,12 @@ export default function MainArea() {
   // -----------------------------------------------------------
   const [previewEvent, setPreviewEvent] = useState<Event | null>(null);
   const [previewRect, setPreviewRect] = useState<DOMRect | null>(null);
+
+  // -----------------------------------------------------------
+  // Todo form state
+  // -----------------------------------------------------------
+  const [todoFormOpen, setTodoFormOpen] = useState(false);
+  const [editingTodo, setEditingTodo] = useState<Todo | null>(null);
 
   // -----------------------------------------------------------
   // Handlers: create event from time grid
@@ -194,7 +237,6 @@ export default function MainArea() {
         } else {
           const client = getSupabaseClient();
           if (client) {
-            // Build Supabase-compatible update (no null for non-nullable DB columns)
             const apiUpdates = {
               title: data.title,
               description: data.description || '',
@@ -209,7 +251,6 @@ export default function MainArea() {
             const result = await apiUpdateEvent(client, eventId, apiUpdates);
             if (result.data) {
               dispatch({ type: 'UPDATE_EVENT', event: result.data as unknown as Event });
-              // Update reminders
               await setRemindersForEvent(client, eventId, data.reminderOffsets);
             }
           }
@@ -258,7 +299,6 @@ export default function MainArea() {
             });
             if (result.data) {
               dispatch({ type: 'ADD_EVENT', event: result.data as unknown as Event });
-              // Set reminders
               await setRemindersForEvent(client, result.data.id, data.reminderOffsets);
             }
           }
@@ -343,6 +383,147 @@ export default function MainArea() {
   );
 
   // -----------------------------------------------------------
+  // Handlers: Todo CRUD
+  // -----------------------------------------------------------
+
+  const handleOpenNewTodo = useCallback(() => {
+    setEditingTodo(null);
+    setTodoFormOpen(true);
+  }, []);
+
+  const handleEditTodo = useCallback((todo: Todo) => {
+    setEditingTodo(todo);
+    setTodoFormOpen(true);
+  }, []);
+
+  const handleSaveTodo = useCallback(
+    async (data: TodoFormData, todoId?: string) => {
+      const now = new Date().toISOString();
+
+      if (todoId) {
+        // Update existing todo
+        const localUpdates: Partial<Todo> = {
+          title: data.title,
+          description: data.description || null,
+          due_date: data.dueDate || null,
+          due_time: data.dueTime ? `${data.dueTime}:00` : null,
+          calendar_id: data.calendarId,
+          updated_at: now,
+        };
+
+        if (isDemoMode) {
+          const existing = todos.find((t) => t.id === todoId);
+          if (existing) {
+            dispatch({ type: 'UPDATE_TODO', todo: { ...existing, ...localUpdates } });
+          }
+        } else {
+          const client = getSupabaseClient();
+          if (client) {
+            const result = await apiUpdateTodo(client, todoId, {
+              title: data.title,
+              description: data.description || undefined,
+              due_date: data.dueDate || null,
+              due_time: data.dueTime ? `${data.dueTime}:00` : null,
+              calendar_id: data.calendarId,
+              updated_at: now,
+            });
+            if (result.data) {
+              dispatch({ type: 'UPDATE_TODO', todo: result.data as unknown as Todo });
+              await setRemindersForTodo(client, todoId, data.reminderOffsets);
+            }
+          }
+        }
+      } else {
+        // Create new todo
+        const newTodo: Todo = {
+          id: nextDemoTodoId(),
+          user_id: state.userId ?? 'demo',
+          calendar_id: data.calendarId,
+          title: data.title,
+          description: data.description || null,
+          due_date: data.dueDate || null,
+          due_time: data.dueTime ? `${data.dueTime}:00` : null,
+          is_completed: false,
+          completed_at: null,
+          color: null,
+          deleted_at: null,
+          created_at: now,
+          updated_at: now,
+        };
+
+        if (isDemoMode) {
+          dispatch({ type: 'ADD_TODO', todo: newTodo });
+        } else {
+          const client = getSupabaseClient();
+          if (client) {
+            const result = await apiCreateTodo(client, {
+              user_id: state.userId!,
+              calendar_id: data.calendarId,
+              title: data.title,
+              description: data.description || undefined,
+              due_date: data.dueDate || null,
+              due_time: data.dueTime ? `${data.dueTime}:00` : null,
+            });
+            if (result.data) {
+              dispatch({ type: 'ADD_TODO', todo: result.data as unknown as Todo });
+              await setRemindersForTodo(client, result.data.id, data.reminderOffsets);
+            }
+          }
+        }
+      }
+
+      setTodoFormOpen(false);
+      setEditingTodo(null);
+    },
+    [isDemoMode, todos, state.userId, dispatch],
+  );
+
+  const handleToggleTodo = useCallback(
+    async (todo: Todo) => {
+      const newCompleted = !todo.is_completed;
+      const now = new Date().toISOString();
+
+      if (isDemoMode) {
+        dispatch({
+          type: 'UPDATE_TODO',
+          todo: {
+            ...todo,
+            is_completed: newCompleted,
+            completed_at: newCompleted ? now : null,
+            updated_at: now,
+          },
+        });
+      } else {
+        const client = getSupabaseClient();
+        if (client) {
+          const result = await apiToggleTodoCompleted(client, todo.id, newCompleted);
+          if (result.data) {
+            dispatch({ type: 'UPDATE_TODO', todo: result.data as unknown as Todo });
+          }
+        }
+      }
+    },
+    [isDemoMode, dispatch],
+  );
+
+  const handleDeleteTodo = useCallback(
+    async (todoId: string) => {
+      if (isDemoMode) {
+        dispatch({ type: 'DELETE_TODO', id: todoId });
+      } else {
+        const client = getSupabaseClient();
+        if (client) {
+          const result = await apiSoftDeleteTodo(client, todoId);
+          if (!result.error) {
+            dispatch({ type: 'DELETE_TODO', id: todoId });
+          }
+        }
+      }
+    },
+    [isDemoMode, dispatch],
+  );
+
+  // -----------------------------------------------------------
   // Render view
   // -----------------------------------------------------------
   function renderView() {
@@ -377,6 +558,7 @@ export default function MainArea() {
             currentDate={state.currentDate}
             events={events}
             calendars={calendars}
+            todos={todos}
           />
         );
       case 'agenda':
@@ -385,6 +567,7 @@ export default function MainArea() {
             currentDate={state.currentDate}
             events={events}
             calendars={calendars}
+            todos={todos}
           />
         );
       default:
@@ -394,7 +577,24 @@ export default function MainArea() {
 
   return (
     <main className={styles.mainArea}>
-      {renderView()}
+      <div className={styles.viewArea}>
+        {renderView()}
+      </div>
+
+      {/* Todo panel (right side) */}
+      {state.todoPanelOpen && (
+        <div className={styles.todoPanelWrapper}>
+          <TodoList
+            todos={todos}
+            calendars={calendars}
+            onNewTodo={handleOpenNewTodo}
+            onEditTodo={handleEditTodo}
+            onToggleTodo={handleToggleTodo}
+            onDeleteTodo={handleDeleteTodo}
+            onClose={() => dispatch({ type: 'SET_TODO_PANEL_OPEN', open: false })}
+          />
+        </div>
+      )}
 
       {/* Event form modal */}
       {formOpen && (
@@ -423,6 +623,19 @@ export default function MainArea() {
           onClose={() => {
             setPreviewEvent(null);
             setPreviewRect(null);
+          }}
+        />
+      )}
+
+      {/* Todo form modal */}
+      {todoFormOpen && (
+        <TodoForm
+          todo={editingTodo}
+          calendars={calendars}
+          onSave={handleSaveTodo}
+          onClose={() => {
+            setTodoFormOpen(false);
+            setEditingTodo(null);
           }}
         />
       )}

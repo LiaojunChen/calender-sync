@@ -7,7 +7,7 @@ import CalendarList from '@/components/calendar/CalendarList';
 import styles from './Sidebar.module.css';
 
 export default function Sidebar() {
-  const { state } = useAppContext();
+  const { state, dispatch } = useAppContext();
   const [miniCalYear, setMiniCalYear] = useState(new Date().getFullYear());
   const [miniCalMonth, setMiniCalMonth] = useState(new Date().getMonth());
 
@@ -43,6 +43,25 @@ export default function Sidebar() {
       {/* Calendar List */}
       <div className={styles.section}>
         <CalendarList />
+      </div>
+
+      {/* Todo toggle */}
+      <div className={styles.section}>
+        <button
+          type="button"
+          className={`${styles.todoToggleBtn} ${state.todoPanelOpen ? styles.todoToggleBtnActive : ''}`}
+          onClick={() => dispatch({ type: 'SET_TODO_PANEL_OPEN', open: !state.todoPanelOpen })}
+          title={state.todoPanelOpen ? '隐藏待办面板' : '显示待办面板'}
+        >
+          <span className={styles.todoToggleIcon}>
+            <svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="3" width="14" height="14" rx="2" />
+              <path d="M7 7h6M7 10h6M7 13h4" />
+              <rect x="3" y="3" width="4" height="4" rx="1" fill="currentColor" stroke="none" opacity="0.3" />
+            </svg>
+          </span>
+          待办事项
+        </button>
       </div>
     </aside>
   );

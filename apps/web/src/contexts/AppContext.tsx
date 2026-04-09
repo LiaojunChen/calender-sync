@@ -8,7 +8,7 @@ import React, {
   useMemo,
   useReducer,
 } from 'react';
-import type { Calendar, Event } from '@project-calendar/shared';
+import type { Calendar, Event, Todo } from '@project-calendar/shared';
 
 // ============================================================
 // Types
@@ -28,6 +28,10 @@ export interface AppState {
   calendars: Calendar[];
   /** All events */
   events: Event[];
+  /** All todos */
+  todos: Todo[];
+  /** Whether todo panel is open */
+  todoPanelOpen: boolean;
   /** Theme preference */
   theme: ThemeMode;
   /** Resolved theme (after applying system preference) */
@@ -53,6 +57,11 @@ type AppAction =
   | { type: 'ADD_EVENT'; event: Event }
   | { type: 'UPDATE_EVENT'; event: Event }
   | { type: 'DELETE_EVENT'; id: string }
+  | { type: 'SET_TODOS'; todos: Todo[] }
+  | { type: 'ADD_TODO'; todo: Todo }
+  | { type: 'UPDATE_TODO'; todo: Todo }
+  | { type: 'DELETE_TODO'; id: string }
+  | { type: 'SET_TODO_PANEL_OPEN'; open: boolean }
   | { type: 'SET_THEME'; theme: ThemeMode }
   | { type: 'SET_RESOLVED_THEME'; resolvedTheme: 'light' | 'dark' }
   | { type: 'SET_AUTHENTICATED'; isAuthenticated: boolean; userId: string | null }
@@ -81,6 +90,8 @@ const initialState: AppState = {
   sidebarOpen: true,
   calendars: [],
   events: [],
+  todos: [],
+  todoPanelOpen: false,
   theme: 'system',
   resolvedTheme: 'light',
   isAuthenticated: false,
@@ -139,6 +150,24 @@ function appReducer(state: AppState, action: AppAction): AppState {
         ...state,
         events: state.events.filter((e) => e.id !== action.id),
       };
+    case 'SET_TODOS':
+      return { ...state, todos: action.todos };
+    case 'ADD_TODO':
+      return { ...state, todos: [...state.todos, action.todo] };
+    case 'UPDATE_TODO':
+      return {
+        ...state,
+        todos: state.todos.map((t) =>
+          t.id === action.todo.id ? action.todo : t
+        ),
+      };
+    case 'DELETE_TODO':
+      return {
+        ...state,
+        todos: state.todos.filter((t) => t.id !== action.id),
+      };
+    case 'SET_TODO_PANEL_OPEN':
+      return { ...state, todoPanelOpen: action.open };
     case 'SET_THEME':
       return { ...state, theme: action.theme };
     case 'SET_RESOLVED_THEME':

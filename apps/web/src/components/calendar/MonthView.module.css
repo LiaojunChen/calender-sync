@@ -190,3 +190,35 @@
   color: var(--accent-primary);
   text-decoration: underline;
 }
+
+/* Todo indicator in month cell */
+.todoEntry {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-size: 11px;
+  line-height: 1.4;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+
+.todoEntry:hover {
+  background: var(--bg-hover);
+}
+
+.todoCheckIcon {
+  flex-shrink: 0;
+  opacity: 0.75;
+}
+
+.todoEntryTitle {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-secondary);
+  font-size: 11px;
+}

@@ -54,3 +54,41 @@
 .section {
   padding: 0 12px;
 }
+
+/* Todo toggle button */
+.todoToggleBtn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 12px;
+  margin-top: 8px;
+  background: none;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  text-align: left;
+}
+
+.todoToggleBtn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.todoToggleBtnActive {
+  background: color-mix(in srgb, var(--accent-primary) 12%, transparent);
+  color: var(--accent-primary);
+}
+
+.todoToggleIcon {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}

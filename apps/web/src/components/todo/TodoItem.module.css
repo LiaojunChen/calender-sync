@@ -1,0 +1,134 @@
+.todoItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  border-left: 3px solid transparent;
+  background: var(--bg-primary);
+  transition: background 0.15s;
+  position: relative;
+  cursor: default;
+}
+
+.todoItem:hover {
+  background: var(--bg-hover);
+}
+
+.todoItem:hover .actions {
+  opacity: 1;
+}
+
+.completed {
+  opacity: 0.6;
+}
+
+.completed .title {
+  text-decoration: line-through;
+  color: var(--text-secondary);
+}
+
+/* Checkbox */
+.checkbox {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 1px;
+  border-radius: 3px;
+  transition: opacity 0.15s;
+}
+
+.checkbox:hover {
+  opacity: 0.75;
+}
+
+/* Content */
+.content {
+  flex: 1;
+  min-width: 0;
+  cursor: pointer;
+}
+
+.title {
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+.meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 3px;
+}
+
+.dueDate {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.description {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.calendarBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.calendarDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* Actions (edit/delete buttons) */
+.actions {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  opacity: 0;
+  transition: opacity 0.15s;
+  flex-shrink: 0;
+}
+
+.actionBtn {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: none;
+  background: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: background 0.15s, color 0.15s;
+}
+
+.actionBtn:hover {
+  background: var(--bg-hover);
+  color: var(--accent-primary);
+}
+
+.deleteBtn:hover {
+  color: var(--accent-danger);
+}

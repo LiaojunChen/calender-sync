@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useMemo } from 'react';
-import type { Event, Calendar } from '@project-calendar/shared';
+import type { Event, Calendar, Todo } from '@project-calendar/shared';
 import {
   addDays,
   startOfDay,
@@ -19,14 +19,16 @@ interface AgendaViewProps {
   currentDate: Date;
   events: Event[];
   calendars: Calendar[];
+  todos?: Todo[];
 }
 
 interface DayGroup {
   date: Date;
   events: Event[];
+  todos: Todo[];
 }
 
-export default function AgendaView({ currentDate, events, calendars }: AgendaViewProps) {
+export default function AgendaView({ currentDate, events, calendars, todos = [] }: AgendaViewProps) {
   const calendarMap = useMemo(() => {
     const map = new Map<string, Calendar>();
     for (const c of calendars) map.set(c.id, c);
@@ -58,13 +60,27 @@ export default function AgendaView({ currentDate, events, calendars }: AgendaVie
     });
   }, [events, dates, visibleCalendarIds]);
 
-  // Group events by date (an event can appear in multiple days if it spans)
+  // Filter todos within the agenda window
+  const filteredTodos = useMemo(() => {
+    const rangeStartStr = dates[0].toISOString().substring(0, 10);
+    const rangeEndStr = dates[dates.length - 1].toISOString().substring(0, 10);
+
+    return todos.filter((t) => {
+      if (t.deleted_at) return false;
+      if (!t.due_date) return false;
+      if (!visibleCalendarIds.has(t.calendar_id)) return false;
+      return t.due_date >= rangeStartStr && t.due_date <= rangeEndStr;
+    });
+  }, [todos, dates, visibleCalendarIds]);
+
+  // Group events and todos by date
   const dayGroups = useMemo(() => {
     const groups: DayGroup[] = [];
 
     for (const date of dates) {
       const dayStart = startOfDay(date).getTime();
       const dayEnd = endOfDay(date).getTime();
+      const dateStr = date.toISOString().substring(0, 10);
 
       const dayEvents = filteredEvents.filter((ev) => {
         const evStart = new Date(ev.start_time).getTime();
@@ -79,18 +95,34 @@ export default function AgendaView({ currentDate, events, calendars }: AgendaVie
         return new Date(a.start_time).getTime() - new Date(b.start_time).getTime();
       });
 
-      // Only include days that have events
-      if (dayEvents.length > 0) {
-        groups.push({ date, events: dayEvents });
+      const dayTodos = filteredTodos.filter((t) => t.due_date === dateStr);
+
+      // Sort todos by due_time, null time last
+      dayTodos.sort((a, b) => {
+        if (!a.due_time && !b.due_time) return 0;
+        if (!a.due_time) return 1;
+        if (!b.due_time) return -1;
+        return a.due_time.localeCompare(b.due_time);
+      });
+
+      // Only include days that have events or todos
+      if (dayEvents.length > 0 || dayTodos.length > 0) {
+        groups.push({ date, events: dayEvents, todos: dayTodos });
       }
     }
 
     return groups;
-  }, [dates, filteredEvents]);
+  }, [dates, filteredEvents, filteredTodos]);
 
   function getEventColor(ev: Event): string {
     if (ev.color) return ev.color;
     const cal = calendarMap.get(ev.calendar_id);
+    return cal?.color ?? '#1a73e8';
+  }
+
+  function getTodoColor(todo: Todo): string {
+    if (todo.color) return todo.color;
+    const cal = calendarMap.get(todo.calendar_id);
     return cal?.color ?? '#1a73e8';
   }
 
@@ -121,6 +153,11 @@ export default function AgendaView({ currentDate, events, calendars }: AgendaVie
     }
   }
 
+  function getTodoDueText(todo: Todo): string {
+    if (!todo.due_time) return '全天';
+    return `截止 ${todo.due_time.substring(0, 5)}`;
+  }
+
   function renderEventRow(ev: Event, date: Date) {
     const color = getEventColor(ev);
     const timeText = getTimeText(ev, date);
@@ -134,6 +171,40 @@ export default function AgendaView({ currentDate, events, calendars }: AgendaVie
           {ev.location && (
             <span className={styles.eventLocation}>{ev.location}</span>
           )}
+        </div>
+      </div>
+    );
+  }
+
+  function renderTodoRow(todo: Todo) {
+    const color = getTodoColor(todo);
+    const dueText = getTodoDueText(todo);
+
+    return (
+      <div key={todo.id} className={styles.todoRow}>
+        <svg
+          viewBox="0 0 18 18"
+          width="18"
+          height="18"
+          style={{ flexShrink: 0 }}
+        >
+          {todo.is_completed ? (
+            <>
+              <rect x="1" y="1" width="16" height="16" rx="2" fill={color} />
+              <path d="M4 9l3.5 3.5L14 6" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+            </>
+          ) : (
+            <rect x="1" y="1" width="16" height="16" rx="2" fill="none" stroke={color} strokeWidth="1.5" />
+          )}
+        </svg>
+        <div className={styles.todoContent}>
+          <span
+            className={styles.todoTitle}
+            style={todo.is_completed ? { textDecoration: 'line-through', opacity: 0.6 } : undefined}
+          >
+            {todo.title}
+          </span>
+          <span className={styles.todoDueText}>{dueText}</span>
         </div>
       </div>
     );
@@ -171,6 +242,7 @@ export default function AgendaView({ currentDate, events, calendars }: AgendaVie
         </div>
         <div className={styles.eventList}>
           {group.events.map((ev) => renderEventRow(ev, group.date))}
+          {group.todos.map((todo) => renderTodoRow(todo))}
         </div>
       </div>
     );
