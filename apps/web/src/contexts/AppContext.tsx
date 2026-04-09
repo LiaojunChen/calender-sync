@@ -57,10 +57,12 @@ type AppAction =
   | { type: 'ADD_EVENT'; event: Event }
   | { type: 'UPDATE_EVENT'; event: Event }
   | { type: 'DELETE_EVENT'; id: string }
+  | { type: 'RESTORE_EVENT'; event: Event }
   | { type: 'SET_TODOS'; todos: Todo[] }
   | { type: 'ADD_TODO'; todo: Todo }
   | { type: 'UPDATE_TODO'; todo: Todo }
   | { type: 'DELETE_TODO'; id: string }
+  | { type: 'RESTORE_TODO'; todo: Todo }
   | { type: 'SET_TODO_PANEL_OPEN'; open: boolean }
   | { type: 'SET_THEME'; theme: ThemeMode }
   | { type: 'SET_RESOLVED_THEME'; resolvedTheme: 'light' | 'dark' }
@@ -150,6 +152,14 @@ function appReducer(state: AppState, action: AppAction): AppState {
         ...state,
         events: state.events.filter((e) => e.id !== action.id),
       };
+    case 'RESTORE_EVENT':
+      // Re-insert the event only if it doesn't already exist
+      return {
+        ...state,
+        events: state.events.some((e) => e.id === action.event.id)
+          ? state.events.map((e) => (e.id === action.event.id ? action.event : e))
+          : [...state.events, action.event],
+      };
     case 'SET_TODOS':
       return { ...state, todos: action.todos };
     case 'ADD_TODO':
@@ -165,6 +175,14 @@ function appReducer(state: AppState, action: AppAction): AppState {
       return {
         ...state,
         todos: state.todos.filter((t) => t.id !== action.id),
+      };
+    case 'RESTORE_TODO':
+      // Re-insert the todo only if it doesn't already exist
+      return {
+        ...state,
+        todos: state.todos.some((t) => t.id === action.todo.id)
+          ? state.todos.map((t) => (t.id === action.todo.id ? action.todo : t))
+          : [...state.todos, action.todo],
       };
     case 'SET_TODO_PANEL_OPEN':
       return { ...state, todoPanelOpen: action.open };

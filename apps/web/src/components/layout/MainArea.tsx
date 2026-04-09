@@ -18,6 +18,8 @@ import {
 } from '@project-calendar/shared';
 import type { Event, Calendar, Todo } from '@project-calendar/shared';
 import { addDays } from '@project-calendar/shared';
+import { useUndo } from '@/hooks/useUndo';
+import Snackbar from '@/components/common/Snackbar';
 import DayView from '@/components/calendar/DayView';
 import WeekView from '@/components/calendar/WeekView';
 import MonthView from '@/components/calendar/MonthView';
@@ -55,6 +57,9 @@ function buildDateTimeISO(dateStr: string, timeStr: string): string {
 
 export default function MainArea() {
   const { state, dispatch } = useAppContext();
+
+  // Undo / Snackbar
+  const { addUndoable, undoLast, dismissSnackbar, snackbarState } = useUndo();
 
   // Use real calendars if available, fall back to demo
   const calendars = state.calendars.length > 0 ? state.calendars : DEMO_CALENDARS;
@@ -179,26 +184,38 @@ export default function MainArea() {
   );
 
   // -----------------------------------------------------------
-  // Handlers: delete from preview
+  // Handlers: delete from preview (with undo)
   // -----------------------------------------------------------
   const handleDeleteEvent = useCallback(
-    async (eventId: string) => {
+    (eventId: string) => {
+      const ev = events.find((e) => e.id === eventId);
+      if (!ev) return;
+
       setPreviewEvent(null);
       setPreviewRect(null);
 
-      if (isDemoMode) {
-        dispatch({ type: 'DELETE_EVENT', id: eventId });
-      } else {
-        const client = getSupabaseClient();
-        if (client) {
-          const result = await apiSoftDeleteEvent(client, eventId);
-          if (!result.error) {
-            dispatch({ type: 'DELETE_EVENT', id: eventId });
+      // Optimistic local delete
+      dispatch({ type: 'DELETE_EVENT', id: eventId });
+
+      addUndoable({
+        type: 'DELETE_EVENT',
+        description: `已删除「${ev.title}」`,
+        undo: () => {
+          dispatch({ type: 'RESTORE_EVENT', event: ev });
+        },
+        commit: () => {
+          if (isDemoMode) return;
+          const client = getSupabaseClient();
+          if (client) {
+            apiSoftDeleteEvent(client, eventId).catch(() => {
+              // If server delete fails, restore the event locally
+              dispatch({ type: 'RESTORE_EVENT', event: ev });
+            });
           }
-        }
-      }
+        },
+      });
     },
-    [isDemoMode, dispatch],
+    [events, isDemoMode, dispatch, addUndoable],
   );
 
   // -----------------------------------------------------------
@@ -312,10 +329,10 @@ export default function MainArea() {
   );
 
   // -----------------------------------------------------------
-  // Handlers: drag-to-move
+  // Handlers: drag-to-move (with undo)
   // -----------------------------------------------------------
   const handleEventMove = useCallback(
-    async (eventId: string, newStartMinutes: number, dayOffset: number) => {
+    (eventId: string, newStartMinutes: number, dayOffset: number) => {
       const ev = events.find((e) => e.id === eventId);
       if (!ev) return;
 
@@ -333,19 +350,33 @@ export default function MainArea() {
         updated_at: new Date().toISOString(),
       };
 
-      if (isDemoMode) {
-        dispatch({ type: 'UPDATE_EVENT', event: { ...ev, ...moveUpdates } });
-      } else {
-        const client = getSupabaseClient();
-        if (client) {
-          const result = await apiUpdateEvent(client, eventId, moveUpdates);
-          if (result.data) {
-            dispatch({ type: 'UPDATE_EVENT', event: result.data as unknown as Event });
+      // Optimistic update
+      const movedEvent = { ...ev, ...moveUpdates };
+      dispatch({ type: 'UPDATE_EVENT', event: movedEvent });
+
+      addUndoable({
+        type: 'MOVE_EVENT',
+        description: `已移动「${ev.title}」`,
+        undo: () => {
+          dispatch({ type: 'UPDATE_EVENT', event: ev });
+        },
+        commit: () => {
+          if (isDemoMode) return;
+          const client = getSupabaseClient();
+          if (client) {
+            apiUpdateEvent(client, eventId, moveUpdates).then((result) => {
+              if (result.data) {
+                dispatch({ type: 'UPDATE_EVENT', event: result.data as unknown as Event });
+              }
+            }).catch(() => {
+              // Rollback on error
+              dispatch({ type: 'UPDATE_EVENT', event: ev });
+            });
           }
-        }
-      }
+        },
+      });
     },
-    [events, isDemoMode, dispatch],
+    [events, isDemoMode, dispatch, addUndoable],
   );
 
   // -----------------------------------------------------------
@@ -507,20 +538,32 @@ export default function MainArea() {
   );
 
   const handleDeleteTodo = useCallback(
-    async (todoId: string) => {
-      if (isDemoMode) {
-        dispatch({ type: 'DELETE_TODO', id: todoId });
-      } else {
-        const client = getSupabaseClient();
-        if (client) {
-          const result = await apiSoftDeleteTodo(client, todoId);
-          if (!result.error) {
-            dispatch({ type: 'DELETE_TODO', id: todoId });
+    (todoId: string) => {
+      const todo = todos.find((t) => t.id === todoId);
+      if (!todo) return;
+
+      // Optimistic local delete
+      dispatch({ type: 'DELETE_TODO', id: todoId });
+
+      addUndoable({
+        type: 'DELETE_TODO',
+        description: `已删除「${todo.title}」`,
+        undo: () => {
+          dispatch({ type: 'RESTORE_TODO', todo });
+        },
+        commit: () => {
+          if (isDemoMode) return;
+          const client = getSupabaseClient();
+          if (client) {
+            apiSoftDeleteTodo(client, todoId).catch(() => {
+              // If server delete fails, restore the todo locally
+              dispatch({ type: 'RESTORE_TODO', todo });
+            });
           }
-        }
-      }
+        },
+      });
     },
-    [isDemoMode, dispatch],
+    [todos, isDemoMode, dispatch, addUndoable],
   );
 
   // -----------------------------------------------------------
@@ -639,6 +682,13 @@ export default function MainArea() {
           }}
         />
       )}
+
+      {/* Undo Snackbar */}
+      <Snackbar
+        state={snackbarState}
+        onUndo={undoLast}
+        onClose={dismissSnackbar}
+      />
     </main>
   );
 }

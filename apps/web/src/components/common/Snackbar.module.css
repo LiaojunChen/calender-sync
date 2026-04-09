@@ -1,0 +1,119 @@
+/* ============================================================
+   Snackbar — bottom-center toast with undo support
+   ============================================================ */
+
+.snackbar {
+  position: fixed;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%) translateY(0);
+  z-index: 9999;
+
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+  background: #323232;
+  color: #ffffff;
+  border-radius: 4px;
+  padding: 12px 16px;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.35);
+
+  max-width: 400px;
+  min-width: 260px;
+  width: max-content;
+
+  /* Enter: slide up + fade in */
+  animation: slideUp 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) both;
+}
+
+.snackbar.exiting {
+  animation: fadeOut 0.3s ease forwards;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(-50%) translateY(8px);
+  }
+}
+
+/* ---- Message text ---- */
+
+.message {
+  flex: 1;
+  font-size: 14px;
+  line-height: 1.4;
+  color: #ffffff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ---- Undo button ---- */
+
+.undoBtn {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 2px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #90caf9; /* light-blue accent, visible on dark background */
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  line-height: 1;
+  transition: opacity 0.15s;
+}
+
+.undoBtn:hover {
+  opacity: 0.8;
+}
+
+.undoBtn:focus-visible {
+  outline: 2px solid #90caf9;
+  outline-offset: 2px;
+}
+
+/* ---- Close button ---- */
+
+.closeBtn {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 2px;
+  color: rgba(255, 255, 255, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  transition: color 0.15s;
+}
+
+.closeBtn:hover {
+  color: #ffffff;
+}
+
+.closeBtn:focus-visible {
+  outline: 2px solid #ffffff;
+  outline-offset: 2px;
+}
