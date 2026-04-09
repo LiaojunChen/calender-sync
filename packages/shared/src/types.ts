@@ -2,11 +2,10 @@
 // Domain Types for Calendar/Todo Management System
 // ============================================================
 
-/** User account */
+/** User account (client-safe — excludes password_hash which is server-only) */
 export interface User {
   id: string;
   email: string;
-  password_hash: string;
   display_name: string | null;
   created_at: string;
   updated_at: string;
