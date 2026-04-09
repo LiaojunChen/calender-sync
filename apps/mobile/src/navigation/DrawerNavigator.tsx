@@ -103,13 +103,13 @@ function CustomDrawerContent(
   return (
     <DrawerContentScrollView
       {...props}
-      style={{ backgroundColor: colors.background }}
+      style={{ backgroundColor: colors.surface }}
     >
       {/* ── Calendar section header ── */}
       <Text style={[styles.sectionHeader, { color: colors.text }]}>日历</Text>
 
       {/* ── View switcher ── */}
-      <Text style={[styles.groupLabel, { color: colors.textSecondary }]}>
+      <Text style={[styles.groupLabel, { color: colors.textTertiary }]}>
         视图
       </Text>
       {(Object.keys(VIEW_LABELS) as ViewType[]).map((v) => (
@@ -117,7 +117,8 @@ function CustomDrawerContent(
           key={v}
           style={({ pressed }) => [
             styles.viewItem,
-            pressed && { backgroundColor: colors.surface },
+            activeView === v && { backgroundColor: colors.accentLight },
+            pressed && activeView !== v && { backgroundColor: colors.bgSecondary },
           ]}
           onPress={() => setActiveView(v)}
           accessibilityLabel={VIEW_LABELS[v]}
@@ -150,10 +151,10 @@ function CustomDrawerContent(
         </Pressable>
       ))}
 
-      <View style={[styles.divider, { backgroundColor: colors.border }]} />
+      <View style={[styles.divider, { backgroundColor: colors.borderLight }]} />
 
       {/* ── Calendar list ── */}
-      <Text style={[styles.groupLabel, { color: colors.textSecondary }]}>
+      <Text style={[styles.groupLabel, { color: colors.textTertiary }]}>
         我的日历
       </Text>
       {calendars.map((cal) => (
@@ -161,7 +162,7 @@ function CustomDrawerContent(
           key={cal.id}
           style={({ pressed }) => [
             styles.calendarItem,
-            pressed && { backgroundColor: colors.surface },
+            pressed && { backgroundColor: colors.bgSecondary },
           ]}
           onPress={() => toggleCalendar(cal.id)}
           accessibilityLabel={`${cal.visible ? '隐藏' : '显示'}日历 ${cal.name}`}
@@ -189,7 +190,7 @@ function CustomDrawerContent(
       <Pressable
         style={({ pressed }) => [
           styles.addCalendar,
-          pressed && { backgroundColor: colors.surface },
+          pressed && { backgroundColor: colors.bgSecondary },
         ]}
         onPress={() => {
           /* TODO: navigate to create calendar screen */
@@ -200,13 +201,13 @@ function CustomDrawerContent(
         </Text>
       </Pressable>
 
-      <View style={[styles.divider, { backgroundColor: colors.border }]} />
+      <View style={[styles.divider, { backgroundColor: colors.borderLight }]} />
 
       {/* ── Settings ── */}
       <Pressable
         style={({ pressed }) => [
           styles.settingsRow,
-          pressed && { backgroundColor: colors.surface },
+          pressed && { backgroundColor: colors.bgSecondary },
         ]}
         onPress={handleSettings}
         accessibilityLabel="设置"
@@ -257,7 +258,7 @@ export default function DrawerNavigator(): React.JSX.Element {
         headerShown: true,
         header: () => <DrawerHeader navigation={navigation} />,
         drawerStyle: {
-          backgroundColor: colors.background,
+          backgroundColor: colors.surface,
           width: 280,
         },
         drawerType: 'slide',
@@ -276,16 +277,17 @@ export default function DrawerNavigator(): React.JSX.Element {
 
 const styles = StyleSheet.create({
   sectionHeader: {
-    fontSize: 18,
-    fontWeight: 'bold',
+    fontSize: 17,
+    fontWeight: '600',
+    letterSpacing: -0.3,
     paddingHorizontal: 16,
     paddingTop: 8,
     paddingBottom: 16,
   },
   groupLabel: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
-    letterSpacing: 0.5,
+    letterSpacing: 0.8,
     textTransform: 'uppercase',
     paddingHorizontal: 16,
     paddingBottom: 8,
@@ -351,6 +353,7 @@ const styles = StyleSheet.create({
     width: 10,
     height: 10,
     borderRadius: 5,
+    // per spec: 10x10 with radius 5
   },
   addCalendar: {
     paddingHorizontal: 16,

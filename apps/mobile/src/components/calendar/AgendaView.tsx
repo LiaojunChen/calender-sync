@@ -168,12 +168,13 @@ export default function AgendaView({
                     今天
                   </Text>
                 )}
+
               </View>
             </View>
 
             {/* Items */}
             {group.items.length === 0 ? (
-              <Text style={[styles.empty, { color: colors.textSecondary }]}>
+              <Text style={[styles.empty, { color: colors.textTertiary }]}>
                 无日程
               </Text>
             ) : (
@@ -229,8 +230,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   dateFullText: {
-    fontSize: 14,
-    fontWeight: '500',
+    fontSize: 15,
+    fontWeight: '600',
+    letterSpacing: -0.3,
   },
   todayLabel: {
     fontSize: 12,
@@ -241,6 +243,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     paddingHorizontal: 64,
     paddingVertical: 10,
-    fontStyle: 'italic',
+    textAlign: 'center',
   },
 });

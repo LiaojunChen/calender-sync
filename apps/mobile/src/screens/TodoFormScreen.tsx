@@ -226,17 +226,21 @@ export default function TodoFormScreen(): React.JSX.Element {
   return (
     <View style={[styles.outerContainer, { backgroundColor: colors.background }]}>
       {/* Custom header */}
-      <View style={[styles.header, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
+      <View style={[styles.header, { backgroundColor: colors.background, borderBottomColor: colors.border }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerBtn}>
           <Text style={[styles.headerBtnText, { color: colors.primary }]}>取消</Text>
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: colors.text }]}>
           {isEditing ? '编辑待办' : '新建待办'}
         </Text>
-        <TouchableOpacity onPress={() => { void handleSave(); }} style={styles.headerBtn} disabled={saving}>
+        <TouchableOpacity
+          onPress={() => { void handleSave(); }}
+          style={[styles.saveHeaderBtn, { backgroundColor: colors.primary }]}
+          disabled={saving}
+        >
           {saving
-            ? <ActivityIndicator size="small" color={colors.primary} />
-            : <Text style={[styles.headerBtnText, { color: colors.primary }]}>保存</Text>
+            ? <ActivityIndicator size="small" color="#ffffff" />
+            : <Text style={styles.saveHeaderBtnText}>保存</Text>
           }
         </TouchableOpacity>
       </View>
@@ -391,6 +395,19 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 17,
     fontWeight: '600',
+    letterSpacing: -0.3,
+  },
+  saveHeaderBtn: {
+    borderRadius: 8,
+    height: 36,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  saveHeaderBtnText: {
+    color: '#ffffff',
+    fontSize: 15,
+    fontWeight: '600',
   },
   scroll: {
     flex: 1,
@@ -402,15 +419,17 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   label: {
-    fontSize: 13,
+    fontSize: 11,
     marginBottom: 6,
-    fontWeight: '500',
+    fontWeight: '600',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
   },
   input: {
     borderWidth: 1,
     borderRadius: 8,
     paddingHorizontal: 12,
-    paddingVertical: 10,
+    height: 44,
     fontSize: 15,
   },
   multilineInput: {

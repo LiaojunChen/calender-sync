@@ -54,7 +54,7 @@ export default function TopBar({
       style={[
         styles.container,
         {
-          backgroundColor: colors.card,
+          backgroundColor: colors.background,
           paddingTop: insets.top + 4,
           borderBottomColor: colors.border,
         },
@@ -62,7 +62,10 @@ export default function TopBar({
     >
       {/* Hamburger */}
       <Pressable
-        style={styles.iconBtn}
+        style={({ pressed }) => [
+          styles.iconBtn,
+          pressed && { backgroundColor: colors.bgSecondary },
+        ]}
         onPress={onMenuPress}
         hitSlop={8}
         accessibilityLabel="打开菜单"
@@ -76,7 +79,10 @@ export default function TopBar({
       {/* Right actions */}
       <View style={styles.rightActions}>
         <Pressable
-          style={styles.iconBtn}
+          style={({ pressed }) => [
+            styles.iconBtn,
+            pressed && { backgroundColor: colors.bgSecondary },
+          ]}
           onPress={onSearchPress}
           hitSlop={8}
           accessibilityLabel="搜索"
@@ -85,12 +91,12 @@ export default function TopBar({
         </Pressable>
 
         <Pressable
-          style={[styles.todayBtn, { borderColor: colors.primary }]}
+          style={[styles.todayBtn, { borderColor: colors.border }]}
           onPress={onTodayPress}
           hitSlop={4}
           accessibilityLabel="今天"
         >
-          <Text style={[styles.todayText, { color: colors.primary }]}>
+          <Text style={[styles.todayText, { color: colors.text }]}>
             今天
           </Text>
         </Pressable>
@@ -100,7 +106,7 @@ export default function TopBar({
 }
 
 // ---------------------------------------------------------------------------
-// Minimal inline SVG-style icons rendered with Text
+// Minimal inline icons rendered with View/Text
 // ---------------------------------------------------------------------------
 
 function HamburgerIcon({ color }: { color: string }): React.JSX.Element {
@@ -114,9 +120,8 @@ function HamburgerIcon({ color }: { color: string }): React.JSX.Element {
 }
 
 function SearchIcon({ color }: { color: string }): React.JSX.Element {
-  // Simple magnifying-glass via unicode character
   return (
-    <Text style={{ fontSize: 20, color, lineHeight: 24 }}>🔍</Text>
+    <Text style={{ fontSize: 18, color, lineHeight: 24 }}>&#128269;</Text>
   );
 }
 
@@ -128,17 +133,23 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
+    height: 56,
     paddingHorizontal: 12,
     paddingBottom: 10,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
   iconBtn: {
-    padding: 6,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   title: {
     flex: 1,
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '600',
+    letterSpacing: -0.4,
     marginLeft: 8,
   },
   rightActions: {
@@ -148,9 +159,9 @@ const styles = StyleSheet.create({
   },
   todayBtn: {
     borderWidth: 1,
-    borderRadius: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     marginLeft: 4,
   },
   todayText: {

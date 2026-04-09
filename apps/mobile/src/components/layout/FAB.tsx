@@ -7,7 +7,7 @@
 //              ├─────────────┤
 //              │  + 新建待办  │
 //              └─────────────┘
-//                     ●       ← FAB
+//                     ●       <- FAB
 //
 // Tap the FAB to expand the two options; tap either option to
 // navigate to the corresponding creation screen.
@@ -88,6 +88,12 @@ export default function FAB({
     outputRange: [20, 0],
   });
 
+  // Overlay opacity
+  const overlayOpacity = animation.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, 0.4],
+  });
+
   // Rotation for the FAB "+" icon
   const rotation = animation.interpolate({
     inputRange: [0, 1],
@@ -96,10 +102,16 @@ export default function FAB({
 
   return (
     <>
-      {/* Backdrop – closes menu when tapped outside */}
+      {/* Semi-transparent overlay when expanded */}
       {expanded && (
         <TouchableWithoutFeedback onPress={collapse}>
-          <View style={StyleSheet.absoluteFillObject} />
+          <Animated.View
+            style={[
+              StyleSheet.absoluteFillObject,
+              styles.overlay,
+              { opacity: overlayOpacity },
+            ]}
+          />
         </TouchableWithoutFeedback>
       )}
 
@@ -128,7 +140,7 @@ export default function FAB({
             style={({ pressed }) => [
               styles.menuItem,
               { borderBottomColor: colors.border },
-              pressed && { backgroundColor: colors.surface },
+              pressed && { backgroundColor: colors.bgSecondary },
             ]}
             onPress={handleNewEvent}
             accessibilityLabel="新建日程"
@@ -141,7 +153,7 @@ export default function FAB({
           <Pressable
             style={({ pressed }) => [
               styles.menuItem,
-              pressed && { backgroundColor: colors.surface },
+              pressed && { backgroundColor: colors.bgSecondary },
             ]}
             onPress={handleNewTodo}
             accessibilityLabel="新建待办"
@@ -176,6 +188,9 @@ export default function FAB({
 const FAB_SIZE = 56;
 
 const styles = StyleSheet.create({
+  overlay: {
+    backgroundColor: '#000000',
+  },
   fabContainer: {
     position: 'absolute',
     alignItems: 'flex-end',
@@ -186,17 +201,16 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     overflow: 'hidden',
     minWidth: 140,
-    // Shadow (iOS)
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.18,
-    shadowRadius: 6,
-    // Shadow (Android)
-    elevation: 6,
+    // Shadow
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.10,
+    shadowRadius: 16,
+    elevation: 8,
   },
   menuItem: {
-    paddingHorizontal: 18,
-    paddingVertical: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
   menuItemText: {
@@ -206,15 +220,14 @@ const styles = StyleSheet.create({
   fab: {
     width: FAB_SIZE,
     height: FAB_SIZE,
-    borderRadius: FAB_SIZE / 2,
+    borderRadius: 28,
     alignItems: 'center',
     justifyContent: 'center',
-    // Shadow (iOS)
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    // Shadow (Android)
+    // Shadow
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.10,
+    shadowRadius: 16,
     elevation: 8,
   },
   fabIcon: {

@@ -163,25 +163,32 @@ export default function EventDetailScreen(): React.JSX.Element {
   return (
     <View style={[styles.outerContainer, { backgroundColor: colors.background }]}>
       {/* Header */}
-      <View style={[styles.header, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
+      <View style={[styles.header, { backgroundColor: colors.background, borderBottomColor: colors.border }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerBtn}>
           <Text style={[styles.headerBtnText, { color: colors.primary }]}>← 返回</Text>
         </TouchableOpacity>
         <View style={styles.headerActions}>
-          <TouchableOpacity onPress={handleEdit} style={styles.iconBtn}>
-            <Text style={[styles.iconBtnText, { color: colors.primary }]}>✏</Text>
+          <TouchableOpacity
+            onPress={handleEdit}
+            style={[styles.actionBtn, { borderColor: colors.border }]}
+          >
+            <Text style={[styles.actionBtnText, { color: colors.primary }]}>编辑</Text>
           </TouchableOpacity>
-          <TouchableOpacity onPress={handleDelete} style={styles.iconBtn} disabled={deleting}>
+          <TouchableOpacity
+            onPress={handleDelete}
+            style={[styles.actionBtn, { borderColor: colors.danger }]}
+            disabled={deleting}
+          >
             {deleting
               ? <ActivityIndicator size="small" color={colors.danger} />
-              : <Text style={[styles.iconBtnText, { color: colors.danger }]}>🗑</Text>
+              : <Text style={[styles.actionBtnText, { color: colors.danger }]}>删除</Text>
             }
           </TouchableOpacity>
         </View>
       </View>
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
-        {/* Color accent bar */}
+        {/* Color accent bar – full width, 4px */}
         <View style={[styles.accentBar, { backgroundColor: accentColor }]} />
 
         {/* Title */}
@@ -189,32 +196,32 @@ export default function EventDetailScreen(): React.JSX.Element {
 
         {/* Time */}
         <View style={styles.infoRow}>
-          <Text style={styles.infoIcon}>📅</Text>
-          <Text style={[styles.infoText, { color: colors.text }]}>{formatEventTime(event)}</Text>
+          <Text style={styles.infoIcon}>&#128197;</Text>
+          <Text style={[styles.infoText, { color: colors.textSecondary }]}>{formatEventTime(event)}</Text>
         </View>
 
         {/* Location */}
         {event.location ? (
           <View style={styles.infoRow}>
-            <Text style={styles.infoIcon}>📍</Text>
-            <Text style={[styles.infoText, { color: colors.text }]}>{event.location}</Text>
+            <Text style={styles.infoIcon}>&#128205;</Text>
+            <Text style={[styles.infoText, { color: colors.textSecondary }]}>{event.location}</Text>
           </View>
         ) : null}
 
         {/* Description */}
         {event.description ? (
           <View style={styles.infoRow}>
-            <Text style={styles.infoIcon}>📝</Text>
-            <Text style={[styles.infoText, { color: colors.text }]}>{event.description}</Text>
+            <Text style={styles.infoIcon}>&#128221;</Text>
+            <Text style={[styles.infoText, { color: colors.textSecondary }]}>{event.description}</Text>
           </View>
         ) : null}
 
         {/* Calendar */}
         {calendar ? (
           <View style={styles.infoRow}>
-            <Text style={styles.infoIcon}>🗓</Text>
+            <Text style={styles.infoIcon}>&#128197;</Text>
             <View style={[styles.calDot, { backgroundColor: calendar.color }]} />
-            <Text style={[styles.infoText, { color: colors.text }]}>{calendar.name}</Text>
+            <Text style={[styles.infoText, { color: colors.textSecondary }]}>{calendar.name}</Text>
           </View>
         ) : null}
 
@@ -283,11 +290,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 8,
   },
-  iconBtn: {
-    padding: 6,
+  actionBtn: {
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  iconBtnText: {
-    fontSize: 20,
+  actionBtnText: {
+    fontSize: 14,
+    fontWeight: '500',
   },
   scroll: {
     flex: 1,
@@ -297,12 +310,13 @@ const styles = StyleSheet.create({
   },
   accentBar: {
     height: 4,
-    borderRadius: 2,
-    marginBottom: 16,
+    marginHorizontal: -20,
+    marginBottom: 20,
   },
   title: {
-    fontSize: 24,
-    fontWeight: 'bold',
+    fontSize: 20,
+    fontWeight: '700',
+    letterSpacing: -0.4,
     marginBottom: 20,
   },
   infoRow: {

@@ -386,7 +386,7 @@ export default function CalendarScreen({
     >
       {/* Offline banner */}
       {!isConnected && (
-        <View style={styles.offlineBanner}>
+        <View style={[styles.offlineBanner, { backgroundColor: colors.danger }]}>
           <Text style={styles.offlineBannerText}>
             网络连接失败，请检查您的网络
           </Text>
@@ -394,7 +394,7 @@ export default function CalendarScreen({
       )}
       {/* Error banner (shown when connected but sync failed) */}
       {isConnected && fetchError !== null && (
-        <View style={styles.errorBanner}>
+        <View style={[styles.errorBanner, { backgroundColor: colors.danger }]}>
           <Text style={styles.errorBannerText}>同步失败，请重试</Text>
         </View>
       )}
@@ -412,7 +412,6 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   offlineBanner: {
-    backgroundColor: '#b71c1c',
     paddingVertical: 6,
     paddingHorizontal: 16,
     alignItems: 'center',
@@ -423,7 +422,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   errorBanner: {
-    backgroundColor: '#e65100',
     paddingVertical: 6,
     paddingHorizontal: 16,
     alignItems: 'center',

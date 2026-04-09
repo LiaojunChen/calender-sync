@@ -12,43 +12,70 @@ import React, {
 import { useColorScheme } from 'react-native';
 
 // ---------------------------------------------------------------------------
-// Color palette (Google Calendar-inspired)
+// Color palette (refined design system)
 // ---------------------------------------------------------------------------
 
 export interface ThemeColors {
+  // Accent / brand
   primary: string;
+  accentLight: string;
+  // Backgrounds
   background: string;
   surface: string;
+  bgSecondary: string;
+  card: string;
+  // Text
   text: string;
   textSecondary: string;
+  textTertiary: string;
+  // Borders
   border: string;
+  borderLight: string;
+  // Semantic
   tabBar: string;
-  card: string;
   danger: string;
 }
 
 const LIGHT_COLORS: ThemeColors = {
-  primary: '#1a73e8',
-  background: '#ffffff',
-  surface: '#f8f9fa',
-  text: '#202124',
-  textSecondary: '#5f6368',
-  border: '#dadce0',
-  tabBar: '#ffffff',
-  card: '#ffffff',
-  danger: '#ea4335',
+  // Accent
+  primary: '#4F46E5',
+  accentLight: 'rgba(79,70,229,0.12)',
+  // Backgrounds
+  background: '#F8FAFC',
+  surface: '#FFFFFF',
+  bgSecondary: '#F1F5F9',
+  card: '#FFFFFF',
+  // Text
+  text: '#0F172A',
+  textSecondary: '#475569',
+  textTertiary: '#94A3B8',
+  // Borders
+  border: '#E2E8F0',
+  borderLight: '#F1F5F9',
+  // Semantic
+  tabBar: '#FFFFFF',
+  danger: '#DC2626',
 };
 
 const DARK_COLORS: ThemeColors = {
-  primary: '#8ab4f8',
-  background: '#121212',
-  surface: '#1e1e1e',
-  text: '#e8eaed',
-  textSecondary: '#9aa0a6',
-  border: '#3c4043',
-  tabBar: '#1e1e1e',
-  card: '#1e1e1e',
-  danger: '#f28b82',
+  // Accent
+  primary: '#818CF8',
+  accentLight: 'rgba(129,140,248,0.15)',
+  // Backgrounds
+  background: '#0A0D14',
+  surface: '#111827',
+  bgSecondary: '#1A2236',
+  card: '#151C2C',
+  // Text
+  text: '#F0F4FF',
+  textSecondary: '#8B9DC3',
+  textTertiary: '#4B5E85',
+  // Borders
+  border: '#1E2A3D',
+  borderLight: '#162030',
+  // Semantic
+  tabBar: '#111827',
+  danger: '#F87171',
 };
 
 // ---------------------------------------------------------------------------

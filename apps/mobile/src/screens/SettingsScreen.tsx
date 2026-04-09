@@ -77,7 +77,7 @@ function formatReminderLabel(minutes: number): string {
 
 function SectionLabel({ label, colors }: { label: string; colors: ReturnType<typeof useTheme>['colors'] }) {
   return (
-    <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>
+    <Text style={[styles.sectionLabel, { color: colors.textTertiary }]}>
       {label}
     </Text>
   );
@@ -108,7 +108,7 @@ function RadioGroup<T extends string | number>({
             style={[
               styles.radioOption,
               {
-                backgroundColor: selected ? colors.primary : colors.surface,
+                backgroundColor: selected ? colors.accentLight : colors.surface,
                 borderColor: selected ? colors.primary : colors.border,
               },
             ]}
@@ -117,7 +117,7 @@ function RadioGroup<T extends string | number>({
             <Text
               style={[
                 styles.radioOptionText,
-                { color: selected ? '#ffffff' : colors.text },
+                { color: selected ? colors.primary : colors.text, fontWeight: selected ? '600' : '400' },
               ]}
             >
               {opt.label}
@@ -199,7 +199,7 @@ export default function SettingsScreen(): React.JSX.Element {
         wrap
       />
 
-      <View style={[styles.divider, { backgroundColor: colors.border }]} />
+      <View style={[styles.divider, { backgroundColor: colors.borderLight }]} />
 
       {/* Week start */}
       <SectionLabel label="周起始日" colors={colors} />
@@ -210,7 +210,7 @@ export default function SettingsScreen(): React.JSX.Element {
         colors={colors}
       />
 
-      <View style={[styles.divider, { backgroundColor: colors.border }]} />
+      <View style={[styles.divider, { backgroundColor: colors.borderLight }]} />
 
       {/* Default duration */}
       <SectionLabel label="默认时长" colors={colors} />
@@ -222,7 +222,7 @@ export default function SettingsScreen(): React.JSX.Element {
         wrap
       />
 
-      <View style={[styles.divider, { backgroundColor: colors.border }]} />
+      <View style={[styles.divider, { backgroundColor: colors.borderLight }]} />
 
       {/* Default reminders */}
       <SectionLabel label="默认提醒" colors={colors} />
@@ -257,7 +257,7 @@ export default function SettingsScreen(): React.JSX.Element {
         ))}
       </View>
 
-      <View style={[styles.divider, { backgroundColor: colors.border }]} />
+      <View style={[styles.divider, { backgroundColor: colors.borderLight }]} />
 
       {/* Theme */}
       <SectionLabel label="主题" colors={colors} />
@@ -268,7 +268,7 @@ export default function SettingsScreen(): React.JSX.Element {
         colors={colors}
       />
 
-      <View style={[styles.divider, { backgroundColor: colors.border }]} />
+      <View style={[styles.divider, { backgroundColor: colors.borderLight }]} />
 
       {/* Save button */}
       <View style={styles.saveRow}>
@@ -284,7 +284,7 @@ export default function SettingsScreen(): React.JSX.Element {
         </Pressable>
       </View>
 
-      <View style={[styles.divider, { backgroundColor: colors.border }]} />
+      <View style={[styles.divider, { backgroundColor: colors.borderLight }]} />
 
       {/* Logout */}
       <Pressable
@@ -307,15 +307,15 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   sectionLabel: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
-    letterSpacing: 0.5,
+    letterSpacing: 0.8,
     textTransform: 'uppercase',
     marginBottom: 10,
     marginTop: 4,
   },
   divider: {
-    height: StyleSheet.hairlineWidth,
+    height: 1,
     marginVertical: 20,
   },
   radioGroup: {
@@ -332,13 +332,12 @@ const styles = StyleSheet.create({
   radioOption: {
     borderWidth: 1,
     borderRadius: 8,
-    paddingVertical: 8,
-    paddingHorizontal: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
     alignItems: 'center',
   },
   radioOptionText: {
     fontSize: 14,
-    fontWeight: '500',
   },
   reminderContainer: {
     flexDirection: 'row',

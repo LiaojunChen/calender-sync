@@ -59,11 +59,14 @@ export default function EventItem({
     <Pressable
       style={({ pressed }) => [
         styles.row,
-        { backgroundColor: pressed ? colors.surface : 'transparent' },
+        { backgroundColor: pressed ? colors.bgSecondary : 'transparent' },
       ]}
       onPress={onPress}
       accessibilityLabel={item.title}
     >
+      {/* Left accent border */}
+      <View style={[styles.accentBar, { backgroundColor: color }]} />
+
       {/* Color indicator / checkbox */}
       <View style={styles.leftCol}>
         {isTodo(item) ? (
@@ -76,7 +79,7 @@ export default function EventItem({
               },
             ]}
           >
-            {isCompleted && <Text style={styles.checkmark}>✓</Text>}
+            {isCompleted && <Text style={styles.checkmark}>&#10003;</Text>}
           </View>
         ) : (
           <View style={[styles.dot, { backgroundColor: color }]} />
@@ -116,13 +119,21 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
+    paddingHorizontal: 12,
     paddingVertical: 10,
     borderRadius: 8,
-    marginHorizontal: 4,
+    marginHorizontal: 8,
+    marginVertical: 2,
+    overflow: 'hidden',
+  },
+  accentBar: {
+    width: 3,
+    alignSelf: 'stretch',
+    borderRadius: 2,
+    marginRight: 10,
   },
   leftCol: {
-    width: 28,
+    width: 24,
     alignItems: 'center',
     justifyContent: 'center',
   },
