@@ -35,6 +35,11 @@ function getFormatter(): Intl.DateTimeFormat {
   return _formatter;
 }
 
+function normalizeLunarDay(day: string): string {
+  // 21-29: replace 二十X with 廿X (e.g. 二十一 → 廿一)
+  return day.replace(/^二十([一二三四五六七八九])$/, '廿$1');
+}
+
 /**
  * Returns a compact lunar date string for display in calendar cells:
  * - On the first day of a lunar month (初一): returns the month name, e.g. "正月", "二月"
@@ -50,7 +55,7 @@ export function getLunarDateDisplay(date: Date): string | null {
     const day = parts.find((p) => p.type === 'day')?.value ?? '';
     if (!day) return null;
     // Show month name on the first day of the lunar month
-    return day === '初一' ? month : day;
+    return day === '初一' ? month : normalizeLunarDay(day);
   } catch {
     return null;
   }

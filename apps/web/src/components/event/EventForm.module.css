@@ -366,6 +366,31 @@
   transform: scale(0.95);
 }
 
+/* Date picker button */
+.dateBtn {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 9px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background: var(--bg-input);
+  color: var(--text-primary);
+  font-size: 14px;
+  cursor: pointer;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.dateBtn:hover {
+  border-color: var(--border-focus);
+}
+
+.dateBtn:focus {
+  outline: none;
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12);
+}
+
 /* Actions */
 .actions {
   display: flex;

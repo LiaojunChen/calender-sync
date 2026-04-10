@@ -1,0 +1,83 @@
+.panel {
+  margin-top: 8px;
+  background: var(--bg-modal);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  animation: slideDown 0.2s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.columns {
+  display: flex;
+  align-items: stretch;
+  padding: 0 8px;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.divider {
+  width: 1px;
+  background: var(--border-light);
+  align-self: center;
+  height: 60%;
+  flex-shrink: 0;
+  margin: 0 4px;
+}
+
+.colon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: 300;
+  color: var(--text-secondary);
+  padding: 0 2px;
+  flex-shrink: 0;
+  width: 16px;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 10px 12px;
+}
+
+.cancelBtn {
+  padding: 6px 14px;
+  border: none;
+  background: none;
+  color: var(--text-secondary);
+  font-size: 13px;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: background var(--transition-fast);
+}
+
+.cancelBtn:hover {
+  background: var(--bg-hover);
+}
+
+.confirmBtn {
+  padding: 6px 16px;
+  border: none;
+  background: var(--accent-primary);
+  color: var(--text-on-accent);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: background var(--transition-fast), transform var(--transition-fast);
+}
+
+.confirmBtn:hover {
+  background: var(--accent-primary-hover);
+}
+
+.confirmBtn:active {
+  transform: scale(0.97);
+}

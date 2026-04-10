@@ -28,6 +28,7 @@ import {
 } from '@/hooks/useExpandedEvents';
 import Snackbar from '@/components/common/Snackbar';
 import Spinner from '@/components/common/Spinner';
+import CreateTypeDialog from '@/components/common/CreateTypeDialog';
 import DayView from '@/components/calendar/DayView';
 import WeekView from '@/components/calendar/WeekView';
 import MonthView from '@/components/calendar/MonthView';
@@ -215,19 +216,39 @@ export default function MainArea() {
   const [editingTodo, setEditingTodo] = useState<Todo | null>(null);
 
   // -----------------------------------------------------------
+  // Create-type choice dialog state
+  // -----------------------------------------------------------
+  const [createChoiceOpen, setCreateChoiceOpen] = useState(false);
+  const [createChoiceDate, setCreateChoiceDate] = useState<Date | null>(null);
+  const [todoFormDefaultDate, setTodoFormDefaultDate] = useState<Date | null>(null);
+
+  // -----------------------------------------------------------
   // Respond to pending create form request (from Sidebar "+" or MonthView date click)
   // -----------------------------------------------------------
   useEffect(() => {
     if (!state.pendingCreateDate) return;
-    const date = state.pendingCreateDate;
-    const startDate = new Date(date);
-    // Default to 1-hour duration
-    const endDate = new Date(startDate.getTime() + 60 * 60 * 1000);
-    setEditingEvent(null);
-    setFormDefaults({ start: startDate, end: endDate });
-    setFormOpen(true);
+    setCreateChoiceDate(state.pendingCreateDate);
+    setCreateChoiceOpen(true);
     dispatch({ type: 'CLEAR_CREATE_FORM_REQUEST' });
   }, [state.pendingCreateDate, dispatch]);
+
+  const handleChoiceEvent = useCallback(() => {
+    setCreateChoiceOpen(false);
+    if (!createChoiceDate) return;
+    setEditingEvent(null);
+    setFormDefaults({ start: createChoiceDate, end: new Date(createChoiceDate.getTime() + 60 * 60 * 1000) });
+    setFormOpen(true);
+    setCreateChoiceDate(null);
+  }, [createChoiceDate]);
+
+  const handleChoiceTodo = useCallback(() => {
+    setCreateChoiceOpen(false);
+    if (!createChoiceDate) return;
+    setEditingTodo(null);
+    setTodoFormDefaultDate(createChoiceDate);
+    setTodoFormOpen(true);
+    setCreateChoiceDate(null);
+  }, [createChoiceDate]);
 
   // -----------------------------------------------------------
   // Handlers: create event from time grid
@@ -967,12 +988,23 @@ export default function MainArea() {
       {todoFormOpen && (
         <TodoForm
           todo={editingTodo}
+          defaultDate={todoFormDefaultDate ?? undefined}
           calendars={calendars}
           onSave={handleSaveTodo}
           onClose={() => {
             setTodoFormOpen(false);
             setEditingTodo(null);
+            setTodoFormDefaultDate(null);
           }}
+        />
+      )}
+
+      {/* Create-type choice dialog */}
+      {createChoiceOpen && (
+        <CreateTypeDialog
+          onSelectEvent={handleChoiceEvent}
+          onSelectTodo={handleChoiceTodo}
+          onClose={() => { setCreateChoiceOpen(false); setCreateChoiceDate(null); }}
         />
       )}
 

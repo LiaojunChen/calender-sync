@@ -3,6 +3,7 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import type { Todo, Calendar } from '@project-calendar/shared';
 import { toISODateString } from '@project-calendar/shared';
+import DateTimePicker from '@/components/common/DateTimePicker';
 import styles from './TodoForm.module.css';
 
 // ============================================================
@@ -72,6 +73,7 @@ export default function TodoForm({
   const [dueTime, setDueTime] = useState(initDueTime);
   const [calendarId, setCalendarId] = useState(defaultCalId);
   const [reminderOffsets, setReminderOffsets] = useState<number[]>([]);
+  const [pickerOpen, setPickerOpen] = useState(false);
 
   // Close on Escape
   useEffect(() => {
@@ -160,20 +162,30 @@ export default function TodoForm({
         {/* Due date */}
         <div className={styles.fieldGroup}>
           <label className={styles.fieldLabel}>截止日期</label>
-          <div className={styles.fieldRow}>
-            <input
-              className={styles.input}
-              type="date"
-              value={dueDate}
-              onChange={(e) => setDueDate(e.target.value)}
+          <button
+            type="button"
+            className={styles.dateBtn}
+            onClick={() => setPickerOpen(!pickerOpen)}
+          >
+            {dueDate
+              ? `${new Date(dueDate + 'T00:00:00').getFullYear()}年${new Date(dueDate + 'T00:00:00').getMonth()+1}月${new Date(dueDate + 'T00:00:00').getDate()}日${dueTime ? ' ' + dueTime : ''}`
+              : '选择截止日期（可选）'}
+          </button>
+          {pickerOpen && (
+            <DateTimePicker
+              value={dueDate
+                ? new Date(`${dueDate}T${dueTime || '09:00'}:00`)
+                : (defaultDate ?? new Date())
+              }
+              showTime={true}
+              onConfirm={(d) => {
+                setDueDate(d.toISOString().substring(0, 10));
+                setDueTime(`${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`);
+                setPickerOpen(false);
+              }}
+              onCancel={() => setPickerOpen(false)}
             />
-            <input
-              className={styles.input}
-              type="time"
-              value={dueTime}
-              onChange={(e) => setDueTime(e.target.value)}
-            />
-          </div>
+          )}
         </div>
 
         {/* Calendar selector */}

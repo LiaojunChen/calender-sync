@@ -8,6 +8,7 @@ import {
   describeRrule,
   type RecurrenceFrequency,
 } from '@project-calendar/shared';
+import DateTimePicker from '@/components/common/DateTimePicker';
 import styles from './EventForm.module.css';
 
 // ============================================================
@@ -105,6 +106,17 @@ function dateToDateStr(d: Date): string {
 
 function dateToTimeStr(d: Date): string {
   return formatTime(d);
+}
+
+function formatPickerDisplay(dateStr: string, timeStr: string, isAllDay: boolean): string {
+  if (!dateStr) return '选择日期';
+  const d = new Date(`${dateStr}T00:00:00`);
+  const year = d.getFullYear();
+  const month = d.getMonth() + 1;
+  const day = d.getDate();
+  const datePart = `${year}年${month}月${day}日`;
+  if (isAllDay || !timeStr) return datePart;
+  return `${datePart} ${timeStr}`;
 }
 
 /** Detect preset from rrule string */
@@ -312,6 +324,9 @@ export default function EventForm({
     defaultReminderOffsets ?? [10, 1440],
   );
 
+  // Date/time picker state
+  const [activePicker, setActivePicker] = useState<'start' | 'end' | null>(null);
+
   // Recurrence state
   // We store the current rrule string (null = no recurrence)
   // and separately track which preset is selected
@@ -443,42 +458,54 @@ export default function EventForm({
         {/* Date/Time fields */}
         <div className={styles.fieldGroup}>
           <label className={styles.fieldLabel}>开始</label>
-          <div className={styles.fieldRow}>
-            <input
-              className={styles.input}
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
+          <button
+            type="button"
+            className={styles.dateBtn}
+            onClick={() => setActivePicker(activePicker === 'start' ? null : 'start')}
+          >
+            {formatPickerDisplay(startDate, startTime, isAllDay)}
+          </button>
+          {activePicker === 'start' && (
+            <DateTimePicker
+              value={(() => {
+                try { return new Date(`${startDate}T${startTime || '09:00'}:00`); }
+                catch { return new Date(); }
+              })()}
+              showTime={!isAllDay}
+              onConfirm={(d) => {
+                setStartDate(dateToDateStr(d));
+                setStartTime(dateToTimeStr(d));
+                setActivePicker(null);
+              }}
+              onCancel={() => setActivePicker(null)}
             />
-            {!isAllDay && (
-              <input
-                className={styles.input}
-                type="time"
-                value={startTime}
-                onChange={(e) => setStartTime(e.target.value)}
-              />
-            )}
-          </div>
+          )}
         </div>
 
         <div className={styles.fieldGroup}>
           <label className={styles.fieldLabel}>结束</label>
-          <div className={styles.fieldRow}>
-            <input
-              className={styles.input}
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
+          <button
+            type="button"
+            className={styles.dateBtn}
+            onClick={() => setActivePicker(activePicker === 'end' ? null : 'end')}
+          >
+            {formatPickerDisplay(endDate, endTime, isAllDay)}
+          </button>
+          {activePicker === 'end' && (
+            <DateTimePicker
+              value={(() => {
+                try { return new Date(`${endDate}T${endTime || '10:00'}:00`); }
+                catch { return new Date(); }
+              })()}
+              showTime={!isAllDay}
+              onConfirm={(d) => {
+                setEndDate(dateToDateStr(d));
+                setEndTime(dateToTimeStr(d));
+                setActivePicker(null);
+              }}
+              onCancel={() => setActivePicker(null)}
             />
-            {!isAllDay && (
-              <input
-                className={styles.input}
-                type="time"
-                value={endTime}
-                onChange={(e) => setEndTime(e.target.value)}
-              />
-            )}
-          </div>
+          )}
         </div>
 
         {/* Location */}
