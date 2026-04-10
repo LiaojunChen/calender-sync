@@ -3,3 +3,95 @@
   display: flex;
   flex-direction: column;
 }
+
+/* ── Todos strip ─────────────────────────────────── */
+
+.todoStrip {
+  display: flex;
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--border-color);
+  background: var(--bg-surface);
+}
+
+.todoStripGutter {
+  width: 60px;
+  min-width: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: 8px;
+}
+
+.todoStripColumns {
+  display: flex;
+  flex: 1;
+}
+
+.todoColumn {
+  flex: 1;
+  padding: 4px 4px 4px 6px;
+  border-left: 1px solid var(--border-light);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-height: 28px;
+}
+
+.todoColumn:first-child {
+  border-left: none;
+}
+
+.todoColumnToday {
+  background: color-mix(in srgb, var(--accent-primary) 4%, transparent);
+}
+
+/* Individual todo chip */
+.todoChip {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  border-radius: 3px;
+  padding: 1px 4px 1px 2px;
+  font-size: 11px;
+  line-height: 1.4;
+  overflow: hidden;
+  transition: background var(--transition-fast);
+  cursor: default;
+}
+
+.todoChip:hover {
+  background: var(--bg-hover);
+}
+
+.todoChipDone {
+  opacity: 0.5;
+}
+
+.todoChipCheck {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  padding: 1px;
+  cursor: pointer;
+  border-radius: 3px;
+  transition: background var(--transition-fast);
+}
+
+.todoChipCheck:hover {
+  background: rgba(0, 0, 0, 0.08);
+}
+
+.todoChipTitle {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-secondary);
+  flex: 1;
+}
+
+.todoChipDone .todoChipTitle {
+  text-decoration: line-through;
+}

@@ -11,6 +11,7 @@ import {
   isToday,
   startOfDay,
   formatTime,
+  toISODateString,
 } from '@project-calendar/shared';
 import { useAppContext } from '@/contexts/AppContext';
 import { getLunarDateDisplay } from '@/lib/lunarCalendar';
@@ -24,6 +25,7 @@ interface MonthViewProps {
   events: Event[];
   calendars: Calendar[];
   todos?: Todo[];
+  onToggleTodo?: (todo: Todo) => void;
 }
 
 // ----------------------------------------------------------------
@@ -79,7 +81,7 @@ function getSpan(
 // Component
 // ----------------------------------------------------------------
 
-export default function MonthView({ currentDate, events, calendars, todos = [] }: MonthViewProps) {
+export default function MonthView({ currentDate, events, calendars, todos = [], onToggleTodo }: MonthViewProps) {
   const { dispatch } = useAppContext();
 
   const calendarMap = useMemo(() => {
@@ -125,8 +127,8 @@ export default function MonthView({ currentDate, events, calendars, todos = [] }
 
   // Filter todos for the visible grid
   const filteredTodos = useMemo(() => {
-    const gridStartStr = gridDates[0].toISOString().substring(0, 10);
-    const gridEndStr = gridDates[41].toISOString().substring(0, 10);
+    const gridStartStr = toISODateString(gridDates[0]);
+    const gridEndStr = toISODateString(gridDates[41]);
 
     return todos.filter((t) => {
       if (t.deleted_at) return false;
@@ -291,7 +293,7 @@ export default function MonthView({ currentDate, events, calendars, todos = [] }
       }
 
       // Todos for this date
-      const dateStr = date.toISOString().substring(0, 10);
+      const dateStr = toISODateString(date);
       const dayTodos = filteredTodos.filter((t) => t.due_date === dateStr);
 
       // Total items for overflow calculation
@@ -347,26 +349,34 @@ export default function MonthView({ currentDate, events, calendars, todos = [] }
               return (
                 <div
                   key={todo.id}
-                  className={styles.todoEntry}
+                  className={`${styles.todoEntry} ${todo.is_completed ? styles.todoEntryCompleted : ''}`}
                   title={todo.title}
                   onClick={(e) => e.stopPropagation()}
                 >
-                  <svg
-                    className={styles.todoCheckIcon}
-                    viewBox="0 0 14 14"
-                    width="11"
-                    height="11"
-                    style={{ flexShrink: 0 }}
+                  <button
+                    type="button"
+                    className={styles.todoCheckBtn}
+                    title={todo.is_completed ? '标记为未完成' : '标记为完成'}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onToggleTodo?.(todo);
+                    }}
                   >
-                    {todo.is_completed ? (
-                      <>
-                        <rect x="0.5" y="0.5" width="13" height="13" rx="2" fill={todoColor} />
-                        <path d="M3 7l2.5 2.5L11 5" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-                      </>
-                    ) : (
-                      <rect x="0.5" y="0.5" width="13" height="13" rx="2" fill="none" stroke={todoColor} strokeWidth="1.2" />
-                    )}
-                  </svg>
+                    <svg
+                      viewBox="0 0 14 14"
+                      width="11"
+                      height="11"
+                    >
+                      {todo.is_completed ? (
+                        <>
+                          <rect x="0.5" y="0.5" width="13" height="13" rx="2" fill={todoColor} />
+                          <path d="M3 7l2.5 2.5L11 5" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+                        </>
+                      ) : (
+                        <rect x="0.5" y="0.5" width="13" height="13" rx="2" fill="none" stroke={todoColor} strokeWidth="1.2" />
+                      )}
+                    </svg>
+                  </button>
                   <span className={styles.todoEntryTitle}>{todo.title}</span>
                 </div>
               );

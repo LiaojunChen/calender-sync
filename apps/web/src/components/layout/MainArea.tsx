@@ -857,10 +857,12 @@ export default function MainArea() {
             currentDate={state.currentDate}
             events={events as Event[]}
             calendars={calendars}
+            todos={todos}
             onCreateEvent={handleCreateEvent}
             onEventClick={handleEventClick}
             onEventMove={handleEventMove}
             onEventResize={handleEventResize}
+            onToggleTodo={handleToggleTodo}
           />
         );
       case 'month':
@@ -870,6 +872,7 @@ export default function MainArea() {
             events={events as Event[]}
             calendars={calendars}
             todos={todos}
+            onToggleTodo={handleToggleTodo}
           />
         );
       case 'agenda':

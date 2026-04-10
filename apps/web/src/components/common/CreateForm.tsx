@@ -425,7 +425,7 @@ export default function CreateForm({
                     value={dueDate ? new Date(`${dueDate}T${dueTime || '09:00'}:00`) : defaultDate}
                     showTime
                     onConfirm={(d) => {
-                      setDueDate(d.toISOString().substring(0, 10));
+                      setDueDate(toISODateString(d));
                       setDueTime(`${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`);
                       setTodoPickerOpen(false);
                     }}
