@@ -218,8 +218,11 @@ export default function TimeGrid({
 
       const columnEl = e.currentTarget as HTMLElement;
       const rect = columnEl.getBoundingClientRect();
-      const scrollTop = scrollRef.current?.scrollTop ?? 0;
-      const relY = e.clientY - rect.top + scrollTop;
+      // Capture scroll position at mousedown so we can compensate for
+      // any scroll that happens mid-drag (getBoundingClientRect() already
+      // accounts for current scroll, so we must NOT add scrollTop here).
+      const initialScrollTop = scrollRef.current?.scrollTop ?? 0;
+      const relY = e.clientY - rect.top;
       const clickedMinutes = snapMinutes(Math.max(0, (relY / HOUR_HEIGHT) * 60));
 
       const startY = e.clientY;
@@ -227,15 +230,21 @@ export default function TimeGrid({
       let cancelled = false;
       let currentEndMin = clickedMinutes + SNAP_MINUTES;
 
+      /** Convert a mousemove/mouseup clientY to content-space minutes */
+      function clientYToMinutes(clientY: number): number {
+        // Only add the DELTA from the initial scroll (rect is stale from mousedown)
+        const scrollDelta = (scrollRef.current?.scrollTop ?? 0) - initialScrollTop;
+        const relY2 = clientY - rect.top + scrollDelta;
+        return snapMinutes(Math.max(0, Math.min((relY2 / HOUR_HEIGHT) * 60, 24 * 60)));
+      }
+
       const onMouseMove = (me: MouseEvent) => {
         if (cancelled) return;
         const dy = Math.abs(me.clientY - startY);
         if (!isDragging && dy < DRAG_THRESHOLD) return;
         isDragging = true;
 
-        const relY2 = me.clientY - rect.top + (scrollRef.current?.scrollTop ?? 0);
-        const draggedMinutes = snapMinutes(Math.max(0, Math.min((relY2 / HOUR_HEIGHT) * 60, 24 * 60)));
-
+        const draggedMinutes = clientYToMinutes(me.clientY);
         const startMin = Math.min(clickedMinutes, draggedMinutes);
         const endMin = Math.max(clickedMinutes, draggedMinutes);
 
@@ -263,8 +272,7 @@ export default function TimeGrid({
         } else {
           // Drag-to-create
           if (onCreateEvent) {
-            const relY2 = me.clientY - rect.top + (scrollRef.current?.scrollTop ?? 0);
-            const draggedMinutes = snapMinutes(Math.max(0, Math.min((relY2 / HOUR_HEIGHT) * 60, 24 * 60)));
+            const draggedMinutes = clientYToMinutes(me.clientY);
             const startMin = Math.min(clickedMinutes, draggedMinutes);
             const endMin = Math.max(clickedMinutes, draggedMinutes);
             onCreateEvent(
