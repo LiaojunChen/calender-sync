@@ -365,27 +365,6 @@ export default function MainArea() {
   // -----------------------------------------------------------
   // Handlers: delete from preview (with undo)
   // -----------------------------------------------------------
-  const handleDeleteEvent = useCallback(
-    (eventId: string) => {
-      // Check if this is an expanded instance
-      const ev = events.find((e) => e.id === eventId) as EventWithRrule | undefined;
-      if (!ev) return;
-
-      setPreviewEvent(null);
-      setPreviewRect(null);
-
-      if (ev._recurringEventId) {
-        // Show recurrence dialog
-        setPendingRecurringEvent(ev);
-        setRecurringDialogMode('delete');
-      } else {
-        // Normal delete
-        doDeleteEvent(ev, eventId);
-      }
-    },
-    [events],
-  );
-
   const doDeleteEvent = useCallback(
     (ev: EventWithRrule, eventId: string) => {
       const actualId = ev._recurringEventId ?? eventId;
@@ -411,6 +390,27 @@ export default function MainArea() {
       });
     },
     [isDemoMode, dispatch, addUndoable],
+  );
+
+  const handleDeleteEvent = useCallback(
+    (eventId: string) => {
+      // Check if this is an expanded instance
+      const ev = events.find((e) => e.id === eventId) as EventWithRrule | undefined;
+      if (!ev) return;
+
+      setPreviewEvent(null);
+      setPreviewRect(null);
+
+      if (ev._recurringEventId) {
+        // Show recurrence dialog
+        setPendingRecurringEvent(ev);
+        setRecurringDialogMode('delete');
+      } else {
+        // Normal delete
+        doDeleteEvent(ev, eventId);
+      }
+    },
+    [events, doDeleteEvent],
   );
 
   // -----------------------------------------------------------

@@ -109,7 +109,7 @@ export interface AppContextValue {
 // ============================================================
 
 const initialState: AppState = {
-  currentView: 'week',
+  currentView: 'month',
   currentDate: new Date(),
   sidebarOpen: false,
   calendars: [],
@@ -333,7 +333,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     []
   );
 
-  const navigatePrev = useCallback(() => {
+  function navigatePrev() {
     const { currentView, currentDate } = state;
     let newDate: Date;
     switch (currentView) {
@@ -353,9 +353,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         newDate = currentDate;
     }
     dispatch({ type: 'SET_DATE', date: newDate });
-  }, [state.currentView, state.currentDate]);
+  }
 
-  const navigateNext = useCallback(() => {
+  function navigateNext() {
     const { currentView, currentDate } = state;
     let newDate: Date;
     switch (currentView) {
@@ -375,7 +375,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         newDate = currentDate;
     }
     dispatch({ type: 'SET_DATE', date: newDate });
-  }, [state.currentView, state.currentDate]);
+  }
 
   const value = useMemo<AppContextValue>(
     () => ({
