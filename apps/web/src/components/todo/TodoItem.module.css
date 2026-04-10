@@ -8,11 +8,16 @@
   background: var(--bg-primary);
   transition: background 0.15s;
   position: relative;
-  cursor: default;
+  cursor: grab;
 }
 
 .todoItem:hover {
   background: var(--bg-hover);
+}
+
+.dragging {
+  opacity: 0.55;
+  cursor: grabbing;
 }
 
 .todoItem:hover .actions {

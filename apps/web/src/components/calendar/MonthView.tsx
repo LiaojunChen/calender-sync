@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useCallback, useRef } from 'react';
+import React, { useMemo, useCallback, useRef, useState } from 'react';
 import type { Event, Calendar, Todo } from '@project-calendar/shared';
 import {
   startOfMonth,
@@ -16,6 +16,7 @@ import {
 } from '@project-calendar/shared';
 import { useAppContext } from '@/contexts/AppContext';
 import { getLunarDateDisplay } from '@/lib/lunarCalendar';
+import { hasTodoDragPayload, readTodoDragPayload } from '@/lib/todoDragPayload';
 import styles from './MonthView.module.css';
 
 const DAY_NAMES = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
@@ -27,6 +28,7 @@ interface MonthViewProps {
   calendars: Calendar[];
   todos?: Todo[];
   onToggleTodo?: (todo: Todo) => void;
+  onAssignTodoDate?: (todoId: string, date: Date) => void;
 }
 
 // ----------------------------------------------------------------
@@ -82,11 +84,20 @@ function getSpan(
 // Component
 // ----------------------------------------------------------------
 
-export default function MonthView({ currentDate, events, calendars, todos = [], onToggleTodo }: MonthViewProps) {
+export default function MonthView({
+  currentDate,
+  events,
+  calendars,
+  todos = [],
+  onToggleTodo,
+  onAssignTodoDate,
+}: MonthViewProps) {
   const { dispatch } = useAppContext();
+  const [todoDropDate, setTodoDropDate] = useState<string | null>(null);
 
   // ── Wheel to switch months ────────────────────────────────
   const lastWheelAt = useRef(0);
+  const lastTodoDropAt = useRef(0);
   const handleWheel = useCallback(
     (e: React.WheelEvent) => {
       e.preventDefault();
@@ -193,7 +204,17 @@ export default function MonthView({ currentDate, events, calendars, todos = [], 
   const renderedWeeks = useMemo(
     () => weeks.map((weekDates, weekIdx) => renderWeekRow(weekDates, weekIdx)),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [weeks, multiDayEvents, singleDayEvents, filteredTodos, calendarMap, currentDate, handleDateClick],
+    [
+      weeks,
+      multiDayEvents,
+      singleDayEvents,
+      filteredTodos,
+      calendarMap,
+      currentDate,
+      handleDateClick,
+      onAssignTodoDate,
+      todoDropDate,
+    ],
   );
 
   /**
@@ -327,12 +348,46 @@ export default function MonthView({ currentDate, events, calendars, todos = [], 
       ].filter(Boolean).join(' ');
 
       const lunarDisplay = getLunarDateDisplay(date);
+      const isTodoDropTarget = todoDropDate === dateStr;
 
       return (
         <div
           key={`${weekIdx}-${colIdx}`}
-          className={styles.dateCell}
-          onClick={() => handleDateClick(date)}
+          className={`${styles.dateCell} ${isTodoDropTarget ? styles.dateCellDropTarget : ''}`}
+          onClick={() => {
+            if (Date.now() - lastTodoDropAt.current < 250) {
+              return;
+            }
+            handleDateClick(date);
+          }}
+          onDragEnter={(e) => {
+            if (!hasTodoDragPayload(e.dataTransfer)) return;
+            e.preventDefault();
+            setTodoDropDate(dateStr);
+          }}
+          onDragOver={(e) => {
+            if (!hasTodoDragPayload(e.dataTransfer)) return;
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            if (todoDropDate !== dateStr) {
+              setTodoDropDate(dateStr);
+            }
+          }}
+          onDragLeave={(e) => {
+            const nextTarget = e.relatedTarget;
+            if (nextTarget instanceof Node && e.currentTarget.contains(nextTarget)) {
+              return;
+            }
+            setTodoDropDate((current) => (current === dateStr ? null : current));
+          }}
+          onDrop={(e) => {
+            const todoId = readTodoDragPayload(e.dataTransfer);
+            e.preventDefault();
+            setTodoDropDate(null);
+            if (!todoId) return;
+            lastTodoDropAt.current = Date.now();
+            onAssignTodoDate?.(todoId, date);
+          }}
         >
           <div className={styles.dateHeader}>
             <span className={dateNumberClasses}>

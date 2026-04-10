@@ -2,15 +2,13 @@
 
 import React, { useMemo, useState, useCallback, useEffect } from 'react';
 import type { Todo, Calendar } from '@project-calendar/shared';
-import { toISODateString } from '@project-calendar/shared';
+import {
+  filterTodosByDateBucket,
+  toISODateString,
+  type TodoFilterType,
+} from '@project-calendar/shared';
 import TodoItem from './TodoItem';
 import styles from './TodoList.module.css';
-
-// ============================================================
-// Types
-// ============================================================
-
-type FilterType = 'all' | 'today' | 'upcoming';
 
 interface TodoListProps {
   todos: Todo[];
@@ -62,7 +60,7 @@ export default function TodoList({
   onDeleteTodo,
   onClose,
 }: TodoListProps) {
-  const [filter, setFilter] = useState<FilterType>('all');
+  const [filter, setFilter] = useState<TodoFilterType>('all');
   const [showCompleted, setShowCompleted] = useState(false);
   const [pinnedIds, setPinnedIds] = useState<Set<string>>(loadPinnedIds);
 
@@ -91,22 +89,8 @@ export default function TodoList({
 
   const today = getTodayStr();
 
-  // Apply filter
   const filteredTodos = useMemo(() => {
-    let list = todos.filter((t) => !t.deleted_at);
-
-    switch (filter) {
-      case 'today':
-        list = list.filter((t) => t.due_date === today);
-        break;
-      case 'upcoming':
-        list = list.filter((t) => t.due_date && t.due_date > today);
-        break;
-      default:
-        break;
-    }
-
-    return list;
+    return filterTodosByDateBucket(todos, filter, today);
   }, [todos, filter, today]);
 
   const incompleteTodos = useMemo(
@@ -168,14 +152,20 @@ export default function TodoList({
 
       {/* Filter tabs */}
       <div className={styles.filterTabs}>
-        {(['all', 'today', 'upcoming'] as FilterType[]).map((f) => (
+        {(['all', 'unscheduled', 'today', 'upcoming'] as TodoFilterType[]).map((f) => (
           <button
             key={f}
             type="button"
             className={`${styles.filterTab} ${filter === f ? styles.filterTabActive : ''}`}
             onClick={() => setFilter(f)}
           >
-            {f === 'all' ? '全部' : f === 'today' ? '今天' : '即将到来'}
+            {f === 'all'
+              ? '全部'
+              : f === 'today'
+                ? '今天'
+                : f === 'upcoming'
+                  ? '即将到来'
+                  : '待定ddl'}
           </button>
         ))}
       </div>

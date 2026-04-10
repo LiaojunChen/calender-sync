@@ -21,8 +21,10 @@ import {
   createRecurrenceRule as apiCreateRecurrenceRule,
   getRecurrenceRule as apiGetRecurrenceRule,
   updateRecurrenceRule as apiUpdateRecurrenceRule,
+  assignTodoDueDate,
   buildChinaHolidayCalendar,
   isChinaHolidayCalendar,
+  toISODateString,
 } from '@project-calendar/shared';
 import type { Event, Calendar, Todo, EventExceptionRow } from '@project-calendar/shared';
 import { addDays, startOfMonth, endOfMonth, addMonths, startOfWeek, endOfWeek } from '@project-calendar/shared';
@@ -995,6 +997,49 @@ export default function MainArea() {
     [isDemoMode, todos, state.userId, dispatch],
   );
 
+  const handleAssignTodoDate = useCallback(
+    async (todoId: string, date: Date) => {
+      const existing = todos.find((todo) => todo.id === todoId);
+      if (!existing) {
+        return;
+      }
+
+      const nextDueDate = toISODateString(date);
+      const nextTodo = assignTodoDueDate(existing, nextDueDate);
+      if (!nextTodo) {
+        return;
+      }
+
+      const now = new Date().toISOString();
+
+      if (isDemoMode) {
+        dispatch({
+          type: 'UPDATE_TODO',
+          todo: {
+            ...nextTodo,
+            updated_at: now,
+          },
+        });
+        return;
+      }
+
+      const client = getSupabaseClient();
+      if (!client) {
+        return;
+      }
+
+      const result = await apiUpdateTodo(client, todoId, {
+        due_date: nextDueDate,
+        updated_at: now,
+      });
+
+      if (result.data) {
+        dispatch({ type: 'UPDATE_TODO', todo: result.data as unknown as Todo });
+      }
+    },
+    [dispatch, isDemoMode, todos],
+  );
+
   const handleToggleTodo = useCallback(
     async (todo: Todo) => {
       const newCompleted = !todo.is_completed;
@@ -1090,6 +1135,7 @@ export default function MainArea() {
             calendars={calendars}
             todos={todos}
             onToggleTodo={handleToggleTodo}
+            onAssignTodoDate={handleAssignTodoDate}
           />
         );
       case 'agenda':

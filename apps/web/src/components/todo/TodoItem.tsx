@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useCallback } from 'react';
+import React, { useCallback, useState } from 'react';
 import type { Todo, Calendar } from '@project-calendar/shared';
+import { writeTodoDragPayload } from '@/lib/todoDragPayload';
 import styles from './TodoItem.module.css';
 
 interface TodoItemProps {
@@ -28,6 +29,7 @@ export default function TodoItem({
   isPinned = false,
   onTogglePin,
 }: TodoItemProps) {
+  const [isDragging, setIsDragging] = useState(false);
   const calendarColor = todo.color ?? calendar?.color ?? '#1a73e8';
 
   const handleToggle = useCallback(
@@ -62,10 +64,26 @@ export default function TodoItem({
     [todo.id, onTogglePin],
   );
 
+  const handleDragStart = useCallback(
+    (e: React.DragEvent<HTMLDivElement>) => {
+      writeTodoDragPayload(e.dataTransfer, todo.id);
+      e.dataTransfer.effectAllowed = 'move';
+      setIsDragging(true);
+    },
+    [todo.id],
+  );
+
+  const handleDragEnd = useCallback(() => {
+    setIsDragging(false);
+  }, []);
+
   return (
     <div
-      className={`${styles.todoItem} ${todo.is_completed ? styles.completed : ''} ${isPinned ? styles.pinned : ''}`}
+      className={`${styles.todoItem} ${todo.is_completed ? styles.completed : ''} ${isPinned ? styles.pinned : ''} ${isDragging ? styles.dragging : ''}`}
       style={{ borderLeftColor: calendarColor }}
+      draggable
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
     >
       {/* Checkbox */}
       <button
