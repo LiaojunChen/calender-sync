@@ -4,6 +4,7 @@
 
 import React, { useCallback, useMemo, useState } from 'react';
 import {
+  ActivityIndicator,
   FlatList,
   Pressable,
   StyleSheet,
@@ -17,16 +18,11 @@ import type { StackNavigationProp } from '@react-navigation/stack';
 import { useTheme } from '../hooks/useTheme';
 import type { RootStackParamList } from '../navigation/AppNavigator';
 import type { Calendar, Event, Todo } from '@project-calendar/shared';
+import { useAppData } from '../hooks/useAppData';
 
 // ============================================================
 // Types
 // ============================================================
-
-interface SearchProps {
-  events?: Event[];
-  todos?: Todo[];
-  calendars?: Calendar[];
-}
 
 type NavProp = StackNavigationProp<RootStackParamList>;
 
@@ -76,15 +72,18 @@ interface SearchResult {
 // Component
 // ============================================================
 
-export default function SearchScreen({
-  events = [],
-  todos = [],
-  calendars = [],
-}: SearchProps): React.JSX.Element {
+export default function SearchScreen(): React.JSX.Element {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NavProp>();
   const [query, setQuery] = useState('');
+  const {
+    events,
+    todos,
+    calendars,
+    loading,
+    error,
+  } = useAppData();
 
   // Build calendar color map
   const calendarColorMap = useMemo(() => {
@@ -204,7 +203,17 @@ export default function SearchScreen({
       </View>
 
       {/* Results */}
-      {query.trim() === '' ? (
+      {loading && events.length === 0 && todos.length === 0 && calendars.length === 0 ? (
+        <View style={styles.emptyState}>
+          <ActivityIndicator color={colors.primary} />
+        </View>
+      ) : error ? (
+        <View style={styles.emptyState}>
+          <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
+            {error}
+          </Text>
+        </View>
+      ) : query.trim() === '' ? (
         <View style={styles.emptyState}>
           <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
             输入关键词搜索事件和待办

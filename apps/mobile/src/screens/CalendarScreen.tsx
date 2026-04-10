@@ -15,6 +15,7 @@ import React, {
   useState,
 } from 'react';
 import {
+  ActivityIndicator,
   Alert,
   PanResponder,
   StyleSheet,
@@ -30,13 +31,12 @@ import MonthView from '../components/calendar/MonthView';
 import WeekView from '../components/calendar/WeekView';
 import DayView from '../components/calendar/DayView';
 import AgendaView from '../components/calendar/AgendaView';
-import type { Calendar, Event, Todo } from '@project-calendar/shared';
 import { addDays, addMonths, startOfWeek } from '@project-calendar/shared';
 import {
   cancelAllScheduledNotifications,
   scheduleNotificationsForItems,
 } from '../notifications/scheduler';
-import { createDemoCalendarData } from '../data/demoCalendarData';
+import { useAppData } from '../hooks/useAppData';
 import { syncWidgetData } from '../widget/widgetSync';
 import type { DrawerParamList } from '../navigation/DrawerNavigator';
 
@@ -90,13 +90,15 @@ export default function CalendarScreen(): React.JSX.Element {
   const [currentView, setCurrentView] = useState<ViewType>(requestedView);
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
   const [refreshing, setRefreshing] = useState(false);
-  const [fetchError, setFetchError] = useState<string | null>(null);
-
-  // Demo UI data remains local, but widget sync now uses a dedicated data source.
-  const demoData = useMemo(() => createDemoCalendarData(), []);
-  const events = demoData.events as Event[];
-  const todos = demoData.todos as Todo[];
-  const calendars = demoData.calendars as Calendar[];
+  const [syncError, setSyncError] = useState<string | null>(null);
+  const {
+    events,
+    todos,
+    calendars,
+    loading,
+    error: dataError,
+    refresh,
+  } = useAppData();
 
   useEffect(() => {
     if (route.params?.initialView) {
@@ -114,34 +116,37 @@ export default function CalendarScreen(): React.JSX.Element {
 
   // Reschedule notifications and refresh widget whenever data changes
   useEffect(() => {
+    if (loading) return;
+
     void (async () => {
       try {
         await cancelAllScheduledNotifications();
         await scheduleNotificationsForItems(events, todos, calendars);
         await syncWidgetData();
-        setFetchError(null);
+        setSyncError(null);
       } catch (err) {
         const message =
           err instanceof Error ? err.message : '同步失败，请重试';
-        setFetchError(message);
+        setSyncError(message);
         Alert.alert('同步失败', '数据同步遇到问题，请稍后重试。', [
           { text: '好的', style: 'cancel' },
         ]);
       }
     })();
-  }, [events, todos, calendars]);
+  }, [events, todos, calendars, loading]);
 
   // Refresh handler
   const handleRefresh = useCallback(() => {
     setRefreshing(true);
-    setFetchError(null);
-    void syncWidgetData().catch(() => {
-      // CalendarScreen already surfaces fetch errors through the effect.
-    });
-    setTimeout(() => {
-      setRefreshing(false);
-    }, 600);
-  }, []);
+    setSyncError(null);
+    void refresh()
+      .catch(() => {
+        // Data-fetch errors are surfaced through the hook state.
+      })
+      .finally(() => {
+        setRefreshing(false);
+      });
+  }, [refresh]);
 
   // Auto-retry sync when network reconnects
   const { isConnected } = useNetworkSync(
@@ -259,10 +264,20 @@ export default function CalendarScreen(): React.JSX.Element {
     handleDaySelect,
   ]);
 
+  const screenError = dataError ?? syncError;
+
   // Expose view/date change for DrawerNavigator (via context or callback ref)
   // This stub makes the setters accessible; Task 11 will wire them properly
   // via React context if needed.
   void setCurrentView; // suppress unused-var lint until wired
+
+  if (loading && events.length === 0 && todos.length === 0 && calendars.length === 0) {
+    return (
+      <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
+        <ActivityIndicator color={colors.primary} />
+      </View>
+    );
+  }
 
   return (
     <View
@@ -278,9 +293,9 @@ export default function CalendarScreen(): React.JSX.Element {
         </View>
       )}
       {/* Error banner (shown when connected but sync failed) */}
-      {isConnected && fetchError !== null && (
+      {isConnected && screenError !== null && (
         <View style={[styles.errorBanner, { backgroundColor: colors.danger }]}>
-          <Text style={styles.errorBannerText}>同步失败，请重试</Text>
+          <Text style={styles.errorBannerText}>{screenError}</Text>
         </View>
       )}
       {viewContent}
@@ -295,6 +310,11 @@ export default function CalendarScreen(): React.JSX.Element {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   offlineBanner: {
     paddingVertical: 6,
