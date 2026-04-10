@@ -1,4 +1,10 @@
-import type { Calendar, Event, Todo } from '@project-calendar/shared';
+import {
+  buildChinaHolidayCalendar,
+  ensureChinaHolidayCalendar,
+  type Calendar,
+  type Event,
+  type Todo,
+} from '@project-calendar/shared';
 
 export interface AppData {
   calendars: Calendar[];
@@ -24,6 +30,21 @@ export interface LoadAppDataDeps<TClient> {
   fetchRemoteData: (client: TClient) => Promise<AppData>;
 }
 
+function resolveHolidayUserId(data: AppData): string {
+  return data.calendars[0]?.user_id ?? data.events[0]?.user_id ?? data.todos[0]?.user_id ?? 'mobile-user';
+}
+
+function withChinaHolidayCalendar(data: AppData): AppData {
+  const userId = resolveHolidayUserId(data);
+  const holidayBundle = buildChinaHolidayCalendar(userId);
+
+  return {
+    calendars: ensureChinaHolidayCalendar(data.calendars, userId),
+    events: [...data.events, ...holidayBundle.events],
+    todos: data.todos,
+  };
+}
+
 export async function fetchRemoteAppDataWithDeps<TClient>(
   client: TClient,
   deps: FetchRemoteAppDataDeps<TClient>,
@@ -44,18 +65,18 @@ export async function fetchRemoteAppDataWithDeps<TClient>(
     throw new Error(todosResult.error);
   }
 
-  return {
+  return withChinaHolidayCalendar({
     calendars: calendarsResult.data ?? [],
     events: eventsResult.data ?? [],
     todos: todosResult.data ?? [],
-  };
+  });
 }
 
 export async function loadAppDataWithDeps<TClient>(
   deps: LoadAppDataDeps<TClient>,
 ): Promise<AppData> {
   if (!deps.isSupabaseConfigured) {
-    return deps.getDemoData();
+    return withChinaHolidayCalendar(deps.getDemoData());
   }
 
   const client = deps.getSupabaseClientOrNull();
@@ -63,5 +84,5 @@ export async function loadAppDataWithDeps<TClient>(
     throw new Error('Supabase client unavailable');
   }
 
-  return deps.fetchRemoteData(client);
+  return withChinaHolidayCalendar(await deps.fetchRemoteData(client));
 }

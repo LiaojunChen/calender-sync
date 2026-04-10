@@ -3,7 +3,13 @@
 import React, { useEffect, useCallback } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import { getSupabaseClient } from '@/lib/supabase';
-import { getSession, getCalendars, onAuthStateChange, getUserSettings } from '@project-calendar/shared';
+import {
+  getSession,
+  getCalendars,
+  onAuthStateChange,
+  getUserSettings,
+  ensureChinaHolidayCalendar,
+} from '@project-calendar/shared';
 import type { Calendar, UserSettings } from '@project-calendar/shared';
 import TopBar from '@/components/layout/TopBar';
 import Sidebar from '@/components/layout/Sidebar';
@@ -35,6 +41,22 @@ const pageStyles = {
 function CalendarApp() {
   const { state, dispatch } = useAppContext();
 
+  useEffect(() => {
+    if (!state.isAuthenticated || !state.userId) {
+      return;
+    }
+
+    const nextCalendars = ensureChinaHolidayCalendar(state.calendars, state.userId);
+    if (nextCalendars.length === state.calendars.length) {
+      return;
+    }
+
+    dispatch({
+      type: 'SET_CALENDARS',
+      calendars: nextCalendars,
+    });
+  }, [dispatch, state.calendars, state.isAuthenticated, state.userId]);
+
   // Initialize auth and fetch calendars
   const initializeApp = useCallback(async () => {
     const client = getSupabaseClient();
@@ -59,7 +81,10 @@ function CalendarApp() {
         if (result.data) {
           dispatch({
             type: 'SET_CALENDARS',
-            calendars: result.data as unknown as Calendar[],
+            calendars: ensureChinaHolidayCalendar(
+              result.data as unknown as Calendar[],
+              session.user.id,
+            ),
           });
         }
 
@@ -101,7 +126,10 @@ function CalendarApp() {
         if (result.data) {
           dispatch({
             type: 'SET_CALENDARS',
-            calendars: result.data as unknown as Calendar[],
+            calendars: ensureChinaHolidayCalendar(
+              result.data as unknown as Calendar[],
+              session.user.id,
+            ),
           });
         }
 

@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import { CHINA_HOLIDAY_CALENDAR_ID } from '@project-calendar/shared';
 import {
   fetchRemoteAppDataWithDeps,
   loadAppDataWithDeps,
@@ -7,9 +8,48 @@ import {
 
 function createData(): AppData {
   return {
-    calendars: [{ id: 'cal-1' }] as AppData['calendars'],
-    events: [{ id: 'ev-1' }] as AppData['events'],
-    todos: [{ id: 'todo-1' }] as AppData['todos'],
+    calendars: [{
+      id: 'cal-1',
+      user_id: 'user-1',
+      name: '个人',
+      color: '#1a73e8',
+      is_visible: true,
+      is_default: true,
+      sort_order: 0,
+      created_at: '2026-01-01T00:00:00.000Z',
+      updated_at: '2026-01-01T00:00:00.000Z',
+    }] as AppData['calendars'],
+    events: [{
+      id: 'ev-1',
+      user_id: 'user-1',
+      calendar_id: 'cal-1',
+      title: '测试事件',
+      description: null,
+      location: null,
+      start_time: '2026-04-10T09:00:00.000Z',
+      end_time: '2026-04-10T10:00:00.000Z',
+      is_all_day: false,
+      color: null,
+      recurrence_rule_id: null,
+      deleted_at: null,
+      created_at: '2026-01-01T00:00:00.000Z',
+      updated_at: '2026-01-01T00:00:00.000Z',
+    }] as AppData['events'],
+    todos: [{
+      id: 'todo-1',
+      user_id: 'user-1',
+      calendar_id: 'cal-1',
+      title: '测试待办',
+      description: null,
+      due_date: '2026-04-10',
+      due_time: null,
+      is_completed: false,
+      completed_at: null,
+      color: null,
+      deleted_at: null,
+      created_at: '2026-01-01T00:00:00.000Z',
+      updated_at: '2026-01-01T00:00:00.000Z',
+    }] as AppData['todos'],
   };
 }
 
@@ -26,7 +66,9 @@ describe('loadAppDataWithDeps', () => {
       fetchRemoteData,
     });
 
-    expect(result).toBe(demoData);
+    expect(result.calendars.some((calendar) => calendar.id === CHINA_HOLIDAY_CALENDAR_ID)).toBe(true);
+    expect(result.events.some((event) => event.calendar_id === CHINA_HOLIDAY_CALENDAR_ID)).toBe(true);
+    expect(result.todos).toEqual(demoData.todos);
     expect(getDemoData).toHaveBeenCalledTimes(1);
     expect(fetchRemoteData).not.toHaveBeenCalled();
   });
@@ -43,7 +85,8 @@ describe('loadAppDataWithDeps', () => {
       fetchRemoteData,
     });
 
-    expect(result).toBe(remoteData);
+    expect(result.calendars.some((calendar) => calendar.id === CHINA_HOLIDAY_CALENDAR_ID)).toBe(true);
+    expect(result.events.some((event) => event.calendar_id === CHINA_HOLIDAY_CALENDAR_ID)).toBe(true);
     expect(fetchRemoteData).toHaveBeenCalledWith(client);
   });
 
@@ -70,7 +113,9 @@ describe('fetchRemoteAppDataWithDeps', () => {
       getTodos: vi.fn(async () => ({ data: data.todos, error: null })),
     });
 
-    expect(result).toEqual(data);
+    expect(result.calendars.some((calendar) => calendar.id === CHINA_HOLIDAY_CALENDAR_ID)).toBe(true);
+    expect(result.events.some((event) => event.calendar_id === CHINA_HOLIDAY_CALENDAR_ID)).toBe(true);
+    expect(result.todos).toEqual(data.todos);
   });
 
   it('throws the first query error it encounters', async () => {

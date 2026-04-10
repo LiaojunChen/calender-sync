@@ -336,11 +336,8 @@ export default function MonthView({ currentDate, events, calendars, todos = [], 
         >
           <div className={styles.dateHeader}>
             <span className={dateNumberClasses}>
-              {date.getDate()}
+              {date.getDate()}{lunarDisplay ? `（${lunarDisplay}）` : ''}
             </span>
-            {lunarDisplay && (
-              <span className={styles.lunarDate}>{lunarDisplay}</span>
-            )}
           </div>
           <div className={styles.eventsArea}>
             {multiDaySlots}

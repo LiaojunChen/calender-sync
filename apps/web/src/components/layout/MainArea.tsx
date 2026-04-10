@@ -21,6 +21,8 @@ import {
   createRecurrenceRule as apiCreateRecurrenceRule,
   getRecurrenceRule as apiGetRecurrenceRule,
   updateRecurrenceRule as apiUpdateRecurrenceRule,
+  buildChinaHolidayCalendar,
+  isChinaHolidayCalendar,
 } from '@project-calendar/shared';
 import type { Event, Calendar, Todo, EventExceptionRow } from '@project-calendar/shared';
 import { addDays, startOfMonth, endOfMonth, addMonths, startOfWeek, endOfWeek } from '@project-calendar/shared';
@@ -141,8 +143,16 @@ export default function MainArea() {
   const { addUndoable, undoLast, dismissSnackbar, snackbarState } = useUndo();
   // Use real calendars if available, fall back to demo
   const calendars = state.calendars.length > 0 ? state.calendars : DEMO_CALENDARS;
+  const writableCalendars = useMemo(
+    () => calendars.filter((calendar) => !isChinaHolidayCalendar(calendar.id)),
+    [calendars],
+  );
   // isDemoMode: true when using local demo calendars (no real Supabase account)
   const isDemoMode = state.userId === 'demo-user' || state.calendars.length === 0;
+  const holidayBundle = useMemo(
+    () => buildChinaHolidayCalendar(state.userId ?? 'demo-user'),
+    [state.userId],
+  );
   // Expanded-instance exceptions used by both demo mode and persisted DB-backed rules.
   const [localExceptions, setLocalExceptions] = useState<LocalException[]>([]);
 
@@ -277,7 +287,13 @@ export default function MainArea() {
     })();
   }, [isDemoMode, state.isAuthenticated, dispatch]);
 
-  const rawEvents = state.events as EventWithRrule[];
+  const rawEvents = useMemo(
+    () => [
+      ...(state.events as EventWithRrule[]),
+      ...(holidayBundle.events as EventWithRrule[]),
+    ],
+    [state.events, holidayBundle.events],
+  );
   const todos = state.todos;
 
   // Compute view range with buffer
@@ -447,6 +463,10 @@ export default function MainArea() {
   // -----------------------------------------------------------
   const handleEditFromPreview = useCallback(
     (event: Event) => {
+      if (isChinaHolidayCalendar(event.calendar_id)) {
+        return;
+      }
+
       const evWithRrule = event as EventWithRrule;
 
       // Close preview
@@ -543,6 +563,12 @@ export default function MainArea() {
       // Check if this is an expanded instance
       const ev = events.find((e) => e.id === eventId) as EventWithRrule | undefined;
       if (!ev) return;
+
+      if (isChinaHolidayCalendar(ev.calendar_id)) {
+        setPreviewEvent(null);
+        setPreviewRect(null);
+        return;
+      }
 
       setPreviewEvent(null);
       setPreviewRect(null);
@@ -1119,7 +1145,7 @@ export default function MainArea() {
           defaultStart={formDefaults.start}
           defaultEnd={formDefaults.end}
           defaultReminderOffsets={[10, 1440]}
-          calendars={calendars}
+          calendars={writableCalendars}
           onSave={handleSaveEvent}
           onClose={() => {
             setFormOpen(false);
@@ -1135,6 +1161,7 @@ export default function MainArea() {
           calendar={calendarMap.get(previewEvent.calendar_id)}
           anchorRect={previewRect}
           isRecurring={!!previewEvent._recurringEventId}
+          readOnly={isChinaHolidayCalendar(previewEvent.calendar_id)}
           onEdit={handleEditFromPreview}
           onDelete={handleDeleteEvent}
           onClose={() => {
@@ -1164,7 +1191,7 @@ export default function MainArea() {
       {todoFormOpen && (
         <TodoForm
           todo={editingTodo}
-          calendars={calendars}
+          calendars={writableCalendars}
           onSave={handleSaveTodo}
           onClose={() => {
             setTodoFormOpen(false);
@@ -1178,7 +1205,7 @@ export default function MainArea() {
         <CreateForm
           defaultDate={createFormDate}
           defaultTab="todo"
-          calendars={calendars}
+          calendars={writableCalendars}
           onSaveEvent={(data) => {
             dispatch({ type: 'CLEAR_CREATE_FORM_REQUEST' });
             void handleSaveEvent(data);

@@ -8,6 +8,7 @@ import {
   createCalendar,
   updateCalendar,
   deleteCalendar as apiDeleteCalendar,
+  isChinaHolidayCalendar,
 } from '@project-calendar/shared';
 import styles from './CalendarList.module.css';
 
@@ -147,6 +148,10 @@ export default function CalendarList() {
     async (cal: Calendar) => {
       dispatch({ type: 'TOGGLE_CALENDAR_VISIBILITY', id: cal.id });
 
+      if (isChinaHolidayCalendar(cal.id)) {
+        return;
+      }
+
       if (client) {
         try {
           await updateCalendar(client, cal.id, { is_visible: !cal.is_visible });
@@ -186,7 +191,7 @@ export default function CalendarList() {
           color,
           is_visible: true,
           is_default: false,
-          sort_order: state.calendars.length,
+          sort_order: state.calendars.filter((calendar) => !isChinaHolidayCalendar(calendar.id)).length,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         };
@@ -200,6 +205,7 @@ export default function CalendarList() {
   const handleEdit = useCallback(
     async (name: string, color: string) => {
       if (!editingCalendar) return;
+      if (isChinaHolidayCalendar(editingCalendar.id)) return;
       const updated: Calendar = { ...editingCalendar, name, color, updated_at: new Date().toISOString() };
       setEditingCalendar(null);
 
@@ -221,6 +227,7 @@ export default function CalendarList() {
   // Delete calendar
   const handleDelete = useCallback(async () => {
     if (!deletingCalendar) return;
+    if (isChinaHolidayCalendar(deletingCalendar.id)) return;
     const id = deletingCalendar.id;
     setDeletingCalendar(null);
 
@@ -280,16 +287,18 @@ export default function CalendarList() {
 
           {/* Actions (edit / delete) */}
           <div className={styles.calendarActions}>
-            <button
-              className={styles.calendarActionButton}
-              onClick={() => setEditingCalendar(cal)}
-              title="编辑日历"
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
-              </svg>
-            </button>
-            {!cal.is_default && (
+            {!isChinaHolidayCalendar(cal.id) && (
+              <button
+                className={styles.calendarActionButton}
+                onClick={() => setEditingCalendar(cal)}
+                title="编辑日历"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
+                </svg>
+              </button>
+            )}
+            {!cal.is_default && !isChinaHolidayCalendar(cal.id) && (
               <button
                 className={styles.calendarActionButton}
                 onClick={() => setDeletingCalendar(cal)}

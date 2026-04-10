@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { Calendar } from '@project-calendar/shared';
+import { CHINA_HOLIDAY_CALENDAR_ID } from '@project-calendar/shared';
 import {
   buildDrawerCalendarItems,
   loadDrawerCalendarsWithDeps,
@@ -34,7 +35,7 @@ describe('loadDrawerCalendarsWithDeps', () => {
       getCalendars,
     });
 
-    expect(result).toBe(demoCalendars);
+    expect(result.some((calendar) => calendar.id === CHINA_HOLIDAY_CALENDAR_ID)).toBe(true);
     expect(getDemoCalendars).toHaveBeenCalledTimes(1);
     expect(getCalendars).not.toHaveBeenCalled();
   });
@@ -54,7 +55,7 @@ describe('loadDrawerCalendarsWithDeps', () => {
       getCalendars,
     });
 
-    expect(result).toBe(remoteCalendars);
+    expect(result.some((calendar) => calendar.id === CHINA_HOLIDAY_CALENDAR_ID)).toBe(true);
     expect(getCalendars).toHaveBeenCalledWith(client);
   });
 });
@@ -115,5 +116,24 @@ describe('toggleDrawerCalendarVisibilityWithDeps', () => {
       updatedCalendar,
       calendars[1],
     ]);
+  });
+
+  it('toggles the built-in holiday calendar locally without calling the backend', async () => {
+    const client = { kind: 'client' };
+    const calendars = [
+      makeCalendar({ id: CHINA_HOLIDAY_CALENDAR_ID, name: '中国节假日', is_visible: true }),
+      makeCalendar({ id: 'cal-2', is_visible: false }),
+    ];
+    const updateCalendar = vi.fn();
+
+    const result = await toggleDrawerCalendarVisibilityWithDeps(
+      client,
+      calendars,
+      CHINA_HOLIDAY_CALENDAR_ID,
+      { updateCalendar },
+    );
+
+    expect(updateCalendar).not.toHaveBeenCalled();
+    expect(result[0].is_visible).toBe(false);
   });
 });

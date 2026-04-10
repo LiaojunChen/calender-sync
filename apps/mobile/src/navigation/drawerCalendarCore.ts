@@ -1,4 +1,8 @@
-import type { Calendar } from '@project-calendar/shared';
+import {
+  ensureChinaHolidayCalendar,
+  isChinaHolidayCalendar,
+  type Calendar,
+} from '@project-calendar/shared';
 
 interface Result<T> {
   data: T | null;
@@ -51,7 +55,11 @@ export async function loadDrawerCalendarsWithDeps<TClient>(
   deps: LoadDrawerCalendarsDeps<TClient>,
 ): Promise<Calendar[]> {
   if (!deps.isSupabaseConfigured) {
-    return deps.getDemoCalendars();
+    const demoCalendars = deps.getDemoCalendars();
+    return ensureChinaHolidayCalendar(
+      demoCalendars,
+      demoCalendars[0]?.user_id ?? 'mobile-user',
+    );
   }
 
   const client = deps.getSupabaseClientOrNull();
@@ -64,7 +72,11 @@ export async function loadDrawerCalendarsWithDeps<TClient>(
     throw new Error(result.error);
   }
 
-  return result.data ?? [];
+  const calendars = result.data ?? [];
+  return ensureChinaHolidayCalendar(
+    calendars,
+    calendars[0]?.user_id ?? 'mobile-user',
+  );
 }
 
 export async function toggleDrawerCalendarVisibilityWithDeps<TClient>(
@@ -76,6 +88,10 @@ export async function toggleDrawerCalendarVisibilityWithDeps<TClient>(
   const existingCalendar = calendars.find((calendar) => calendar.id === calendarId);
   if (!existingCalendar) {
     throw new Error('Calendar not found');
+  }
+
+  if (isChinaHolidayCalendar(calendarId)) {
+    return toggleDrawerCalendarVisibilityLocally(calendars, calendarId);
   }
 
   const result = await deps.updateCalendar(client, calendarId, {

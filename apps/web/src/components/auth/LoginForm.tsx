@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useCallback } from 'react';
-import { signIn, signUp } from '@project-calendar/shared';
+import { signIn, signUp, ensureChinaHolidayCalendar } from '@project-calendar/shared';
 import { getSupabaseClient } from '@/lib/supabase';
 import { useAppContext } from '@/contexts/AppContext';
 import styles from './LoginForm.module.css';
@@ -27,41 +27,44 @@ export default function LoginForm() {
     // Use the same IDs as DEMO_CALENDARS so demo events (which use these IDs) are visible
     dispatch({
       type: 'SET_CALENDARS',
-      calendars: [
-        {
-          id: 'cal-personal',
-          user_id: 'demo-user',
-          name: '个人',
-          color: '#039be5',
-          is_visible: true,
-          is_default: true,
-          sort_order: 0,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        },
-        {
-          id: 'cal-work',
-          user_id: 'demo-user',
-          name: '工作',
-          color: '#7986cb',
-          is_visible: true,
-          is_default: false,
-          sort_order: 1,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        },
-        {
-          id: 'cal-study',
-          user_id: 'demo-user',
-          name: '学习',
-          color: '#33b679',
-          is_visible: true,
-          is_default: false,
-          sort_order: 2,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        },
-      ],
+      calendars: ensureChinaHolidayCalendar(
+        [
+          {
+            id: 'cal-personal',
+            user_id: 'demo-user',
+            name: '个人',
+            color: '#039be5',
+            is_visible: true,
+            is_default: true,
+            sort_order: 0,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          },
+          {
+            id: 'cal-work',
+            user_id: 'demo-user',
+            name: '工作',
+            color: '#7986cb',
+            is_visible: true,
+            is_default: false,
+            sort_order: 1,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          },
+          {
+            id: 'cal-study',
+            user_id: 'demo-user',
+            name: '学习',
+            color: '#33b679',
+            is_visible: true,
+            is_default: false,
+            sort_order: 2,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          },
+        ],
+        'demo-user',
+      ),
     });
   }, [dispatch]);
 

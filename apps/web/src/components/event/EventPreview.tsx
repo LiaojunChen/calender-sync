@@ -12,6 +12,8 @@ interface EventPreviewProps {
   anchorRect: DOMRect;
   /** Whether this event is a recurring instance */
   isRecurring?: boolean;
+  /** Whether this event should be displayed as read-only */
+  readOnly?: boolean;
   onEdit: (event: Event) => void;
   onDelete: (eventId: string) => void;
   onClose: () => void;
@@ -50,6 +52,7 @@ export default function EventPreview({
   calendar,
   anchorRect,
   isRecurring = false,
+  readOnly = false,
   onEdit,
   onDelete,
   onClose,
@@ -140,22 +143,24 @@ export default function EventPreview({
           </div>
         )}
 
-        <div className={styles.actions}>
-          <button
-            type="button"
-            className={styles.actionBtn}
-            onClick={() => onEdit(event)}
-          >
-            编辑
-          </button>
-          <button
-            type="button"
-            className={`${styles.actionBtn} ${styles.deleteBtn}`}
-            onClick={() => onDelete(event.id)}
-          >
-            删除
-          </button>
-        </div>
+        {!readOnly && (
+          <div className={styles.actions}>
+            <button
+              type="button"
+              className={styles.actionBtn}
+              onClick={() => onEdit(event)}
+            >
+              编辑
+            </button>
+            <button
+              type="button"
+              className={`${styles.actionBtn} ${styles.deleteBtn}`}
+              onClick={() => onDelete(event.id)}
+            >
+              删除
+            </button>
+          </div>
+        )}
       </div>
     </>
   );
