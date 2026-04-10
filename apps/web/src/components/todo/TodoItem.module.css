@@ -132,3 +132,22 @@
 .deleteBtn:hover {
   color: var(--accent-danger);
 }
+
+/* Pinned state */
+.pinned {
+  background: color-mix(in srgb, var(--accent-primary) 5%, var(--bg-primary));
+}
+
+.pinned:hover {
+  background: color-mix(in srgb, var(--accent-primary) 10%, var(--bg-primary));
+}
+
+/* Pin button active (currently pinned) */
+.pinBtnActive {
+  opacity: 1 !important;
+  color: var(--accent-primary) !important;
+}
+
+.pinBtnActive:hover {
+  color: var(--accent-primary) !important;
+}

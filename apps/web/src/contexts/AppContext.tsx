@@ -111,11 +111,11 @@ export interface AppContextValue {
 const initialState: AppState = {
   currentView: 'week',
   currentDate: new Date(),
-  sidebarOpen: true,
+  sidebarOpen: false,
   calendars: [],
   events: [],
   todos: [],
-  todoPanelOpen: false,
+  todoPanelOpen: true,
   theme: 'system',
   resolvedTheme: 'light',
   isAuthenticated: false,

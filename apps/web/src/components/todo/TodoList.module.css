@@ -113,6 +113,19 @@
   flex: 1;
 }
 
+/* Group labels (pinned / other) */
+.groupLabel {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px 3px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+
 /* Empty state */
 .emptyState {
   display: flex;
@@ -126,8 +139,10 @@
 }
 
 .emptyIcon {
-  font-size: 36px;
-  opacity: 0.4;
+  width: 40px;
+  height: 40px;
+  opacity: 0.3;
+  color: var(--text-secondary);
 }
 
 .emptyNewBtn {
