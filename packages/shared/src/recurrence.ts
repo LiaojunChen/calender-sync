@@ -5,7 +5,7 @@
 // expand recurring event instances.
 // ============================================================
 
-import { RRule, RRuleSet } from 'rrule';
+import { RRule } from 'rrule';
 
 // ============================================================
 // Types
@@ -275,8 +275,11 @@ export function expandRecurrenceInstances(
     const src = rruleString.startsWith('RRULE:')
       ? rruleString
       : `RRULE:${rruleString}`;
-    const base = RRule.fromString(src);
-    rule = new RRule({ ...base.options, dtstart });
+    // Parse the RRULE itself, then anchor it to the actual event start.
+    // `fromString()` injects a "now"-based DTSTART and derived fields like
+    // BYMONTHDAY/BYHOUR, which shifts instances away from the event origin.
+    const options = RRule.parseString(src);
+    rule = new RRule({ ...options, dtstart });
   } catch {
     return [];
   }
