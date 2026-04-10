@@ -29,6 +29,7 @@ import {
 import type { CalendarRow, TodoInsert, TodoUpdate } from '@project-calendar/shared';
 import { getSupabaseClientOrNull, SUPABASE_CONFIG_ERROR } from '../lib/supabase';
 import { DEFAULT_REMINDER_OFFSETS } from '../notifications/scheduler';
+import { syncWidgetData } from '../widget/widgetSync';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -188,6 +189,10 @@ export default function TodoFormScreen(): React.JSX.Element {
       if (savedTodoId) {
         await setRemindersForTodo(supabase, savedTodoId, reminderOffsets);
       }
+
+      await syncWidgetData().catch((error: unknown) => {
+        console.warn('widget sync failed after todo save', error);
+      });
 
       navigation.goBack();
     } finally {

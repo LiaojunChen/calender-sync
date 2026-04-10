@@ -1,10 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!--
-  Todo item row inside the widget ListView.
-  Layout:
-    [ 4dp colour bar ] [ □ checkbox icon ] [ title (14sp) ]
-                                            [ due time (11sp) ]
--->
 <LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/item_todo_root"
@@ -16,7 +10,6 @@
     android:paddingBottom="3dp"
     android:paddingEnd="4dp">
 
-    <!-- Coloured left accent bar -->
     <View
         android:id="@+id/item_todo_color_bar"
         android:layout_width="4dp"
@@ -25,7 +18,6 @@
         android:minHeight="32dp"
         android:background="#4A90E2" />
 
-    <!-- Checkbox icon (static; widget cannot handle interactive checkboxes) -->
     <TextView
         android:id="@+id/item_todo_checkbox"
         android:layout_width="18dp"
@@ -36,7 +28,6 @@
         android:textColor="@color/widget_text_secondary"
         android:layout_marginEnd="4dp" />
 
-    <!-- Text block: title + due time -->
     <LinearLayout
         android:layout_width="0dp"
         android:layout_height="wrap_content"

@@ -30,6 +30,7 @@ import {
 import type { CalendarRow, EventInsert, EventUpdate } from '@project-calendar/shared';
 import { getSupabaseClientOrNull, SUPABASE_CONFIG_ERROR } from '../lib/supabase';
 import { DEFAULT_REMINDER_OFFSETS } from '../notifications/scheduler';
+import { syncWidgetData } from '../widget/widgetSync';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -288,6 +289,10 @@ export default function EventFormScreen(): React.JSX.Element {
       if (savedEventId) {
         await setRemindersForEvent(supabase, savedEventId, reminderOffsets);
       }
+
+      await syncWidgetData().catch((error: unknown) => {
+        console.warn('widget sync failed after event save', error);
+      });
 
       navigation.goBack();
     } finally {

@@ -9,31 +9,17 @@ import android.content.Intent
 import android.net.Uri
 import android.widget.RemoteViews
 import com.projectcalendar.mobile.R
+import java.util.Calendar
 
-/**
- * AppWidgetProvider for the 2×2 calendar home-screen widget.
- *
- * Responsibilities:
- *  - Inflate the widget layout (widget_layout.xml)
- *  - Set the click intent for the "+" (new event) button
- *  - Attach the RemoteViewsService adapter that populates the scrollable
- *    ListView with CalendarWidgetItemFactory rows
- *  - Handle ACTION_WIDGET_REFRESH broadcasts so React Native can trigger an
- *    immediate redraw after data changes
- */
 class CalendarWidgetProvider : AppWidgetProvider() {
 
     companion object {
         const val ACTION_WIDGET_REFRESH =
             "com.projectcalendar.mobile.widget.ACTION_WIDGET_REFRESH"
 
-        /** Deep-link URI scheme used to open specific screens inside the app */
         private const val APP_SCHEME = "projectcalendar"
+        private val WEEKDAY_LABELS = arrayOf("周日", "周一", "周二", "周三", "周四", "周五", "周六")
     }
-
-    // ------------------------------------------------------------------
-    // AppWidgetProvider callbacks
-    // ------------------------------------------------------------------
 
     override fun onUpdate(
         context: Context,
@@ -52,18 +38,12 @@ class CalendarWidgetProvider : AppWidgetProvider() {
             val ids = manager.getAppWidgetIds(
                 ComponentName(context, CalendarWidgetProvider::class.java),
             )
-            // Notify the RemoteViewsService that the data set has changed
             manager.notifyAppWidgetViewDataChanged(ids, R.id.widget_list_view)
-            // Also rebuild the top-level RemoteViews so the header refreshes
             for (id in ids) {
                 updateWidget(context, manager, id)
             }
         }
     }
-
-    // ------------------------------------------------------------------
-    // Private helpers
-    // ------------------------------------------------------------------
 
     private fun updateWidget(
         context: Context,
@@ -71,22 +51,27 @@ class CalendarWidgetProvider : AppWidgetProvider() {
         widgetId: Int,
     ) {
         val views = RemoteViews(context.packageName, R.layout.widget_layout)
+        bindHeaderDate(views)
 
-        // --- Header: tap opens the app at today's agenda view ---
-        val openAppIntent = context.packageManager
-            .getLaunchIntentForPackage(context.packageName)
-            ?.apply { flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP }
-        val openAppPi = PendingIntent.getActivity(
+        val openAgendaIntent = Intent(
+            Intent.ACTION_VIEW,
+            Uri.parse("$APP_SCHEME://agenda/today"),
+        ).apply {
+            setPackage(context.packageName)
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        }
+        val openAgendaPi = PendingIntent.getActivity(
             context,
             0,
-            openAppIntent ?: Intent(),
+            openAgendaIntent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
-        views.setOnClickPendingIntent(R.id.widget_header, openAppPi)
+        views.setOnClickPendingIntent(R.id.widget_header, openAgendaPi)
 
-        // --- "+" button: open new-event screen ---
-        val newEventUri = Uri.parse("$APP_SCHEME://new-event")
-        val newEventIntent = Intent(Intent.ACTION_VIEW, newEventUri).apply {
+        val newEventIntent = Intent(
+            Intent.ACTION_VIEW,
+            Uri.parse("$APP_SCHEME://new-event"),
+        ).apply {
             setPackage(context.packageName)
             flags = Intent.FLAG_ACTIVITY_NEW_TASK
         }
@@ -98,19 +83,13 @@ class CalendarWidgetProvider : AppWidgetProvider() {
         )
         views.setOnClickPendingIntent(R.id.widget_btn_add, newEventPi)
 
-        // --- ListView: attach RemoteViewsService ---
         val serviceIntent = Intent(context, CalendarWidgetService::class.java).apply {
             putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId)
-            // Use the widget ID as a unique URI so Android caches factories
-            // separately per widget instance.
             data = Uri.parse(toUri(Intent.URI_INTENT_SCHEME))
         }
         views.setRemoteAdapter(R.id.widget_list_view, serviceIntent)
-
-        // --- Empty view when there are no upcoming events ---
         views.setEmptyView(R.id.widget_list_view, R.id.widget_empty_text)
 
-        // --- Template for item click: opens the detail screen ---
         val itemClickTemplate = PendingIntent.getActivity(
             context,
             widgetId + 1000,
@@ -123,5 +102,16 @@ class CalendarWidgetProvider : AppWidgetProvider() {
         views.setPendingIntentTemplate(R.id.widget_list_view, itemClickTemplate)
 
         appWidgetManager.updateAppWidget(widgetId, views)
+    }
+
+    private fun bindHeaderDate(views: RemoteViews) {
+        val today = Calendar.getInstance()
+        val dayNumber = today.get(Calendar.DAY_OF_MONTH)
+        val weekday = WEEKDAY_LABELS[today.get(Calendar.DAY_OF_WEEK) - 1]
+        val month = today.get(Calendar.MONTH) + 1
+
+        views.setTextViewText(R.id.widget_day_number, dayNumber.toString())
+        views.setTextViewText(R.id.widget_weekday, weekday)
+        views.setTextViewText(R.id.widget_month, "${month}月")
     }
 }

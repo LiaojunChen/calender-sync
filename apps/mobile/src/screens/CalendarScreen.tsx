@@ -23,6 +23,7 @@ import {
   type GestureResponderEvent,
   type PanResponderGestureState,
 } from 'react-native';
+import { useRoute, type RouteProp } from '@react-navigation/native';
 import { useTheme } from '../hooks/useTheme';
 import { useNetworkSync } from '../hooks/useNetworkSync';
 import MonthView from '../components/calendar/MonthView';
@@ -35,138 +36,15 @@ import {
   cancelAllScheduledNotifications,
   scheduleNotificationsForItems,
 } from '../notifications/scheduler';
-import { broadcastWidgetRefresh } from '../widget/widgetDataBridge';
+import { createDemoCalendarData } from '../data/demoCalendarData';
+import { syncWidgetData } from '../widget/widgetSync';
+import type { DrawerParamList } from '../navigation/DrawerNavigator';
 
 // ---------------------------------------------------------------------------
 // View type (mirrors DrawerNavigator)
 // ---------------------------------------------------------------------------
 
 type ViewType = 'month' | 'week' | 'day' | 'agenda';
-
-// ---------------------------------------------------------------------------
-// Mock data – replace with real Supabase queries in Task 11
-// ---------------------------------------------------------------------------
-
-const TODAY = new Date();
-
-const MOCK_CALENDARS: Calendar[] = [
-  {
-    id: 'cal-1',
-    user_id: 'user-1',
-    name: '个人',
-    color: '#1a73e8',
-    is_visible: true,
-    is_default: true,
-    sort_order: 0,
-    created_at: TODAY.toISOString(),
-    updated_at: TODAY.toISOString(),
-  },
-  {
-    id: 'cal-2',
-    user_id: 'user-1',
-    name: '工作',
-    color: '#34a853',
-    is_visible: true,
-    is_default: false,
-    sort_order: 1,
-    created_at: TODAY.toISOString(),
-    updated_at: TODAY.toISOString(),
-  },
-];
-
-function makeDateStr(date: Date, hour: number, minute: number): string {
-  const d = new Date(date);
-  d.setHours(hour, minute, 0, 0);
-  return d.toISOString();
-}
-
-const MOCK_EVENTS: Event[] = [
-  {
-    id: 'ev-1',
-    user_id: 'user-1',
-    calendar_id: 'cal-2',
-    title: '团队早会',
-    description: null,
-    location: '会议室 A',
-    start_time: makeDateStr(TODAY, 9, 0),
-    end_time: makeDateStr(TODAY, 9, 30),
-    is_all_day: false,
-    color: null,
-    recurrence_rule_id: null,
-    deleted_at: null,
-    created_at: TODAY.toISOString(),
-    updated_at: TODAY.toISOString(),
-  },
-  {
-    id: 'ev-2',
-    user_id: 'user-1',
-    calendar_id: 'cal-2',
-    title: 'Code Review',
-    description: null,
-    location: null,
-    start_time: makeDateStr(TODAY, 14, 0),
-    end_time: makeDateStr(TODAY, 15, 0),
-    is_all_day: false,
-    color: null,
-    recurrence_rule_id: null,
-    deleted_at: null,
-    created_at: TODAY.toISOString(),
-    updated_at: TODAY.toISOString(),
-  },
-  {
-    id: 'ev-3',
-    user_id: 'user-1',
-    calendar_id: 'cal-1',
-    title: '健身',
-    description: null,
-    location: '体育馆',
-    start_time: makeDateStr(addDays(TODAY, 1), 7, 0),
-    end_time: makeDateStr(addDays(TODAY, 1), 8, 0),
-    is_all_day: false,
-    color: '#e91e63',
-    recurrence_rule_id: null,
-    deleted_at: null,
-    created_at: TODAY.toISOString(),
-    updated_at: TODAY.toISOString(),
-  },
-  {
-    id: 'ev-4',
-    user_id: 'user-1',
-    calendar_id: 'cal-1',
-    title: '生日',
-    description: null,
-    location: null,
-    start_time: makeDateStr(addDays(TODAY, 2), 0, 0),
-    end_time: makeDateStr(addDays(TODAY, 2), 23, 59),
-    is_all_day: true,
-    color: '#ff9800',
-    recurrence_rule_id: null,
-    deleted_at: null,
-    created_at: TODAY.toISOString(),
-    updated_at: TODAY.toISOString(),
-  },
-];
-
-const MOCK_TODOS: Todo[] = [
-  {
-    id: 'todo-1',
-    user_id: 'user-1',
-    calendar_id: 'cal-1',
-    title: '提交报告',
-    description: null,
-    due_date: (() => {
-      const d = new Date(TODAY);
-      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-    })(),
-    due_time: '17:00',
-    is_completed: false,
-    completed_at: null,
-    color: null,
-    deleted_at: null,
-    created_at: TODAY.toISOString(),
-    updated_at: TODAY.toISOString(),
-  },
-];
 
 // ---------------------------------------------------------------------------
 // Swipe thresholds
@@ -199,32 +77,40 @@ function navigateDate(
 }
 
 // ---------------------------------------------------------------------------
-// Props (CalendarScreen receives these from DrawerNavigator via route)
-// ---------------------------------------------------------------------------
-
-interface CalendarScreenProps {
-  /** Override from drawer – defaults to 'month' */
-  initialView?: ViewType;
-}
-
-// ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
-export default function CalendarScreen({
-  initialView = 'month',
-}: CalendarScreenProps): React.JSX.Element {
-  const { colors } = useTheme();
+type CalendarRouteProp = RouteProp<DrawerParamList, 'CalendarTab'>;
 
-  const [currentView, setCurrentView] = useState<ViewType>(initialView);
+export default function CalendarScreen(): React.JSX.Element {
+  const { colors } = useTheme();
+  const route = useRoute<CalendarRouteProp>();
+  const requestedView = route.params?.initialView ?? 'month';
+
+  const [currentView, setCurrentView] = useState<ViewType>(requestedView);
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
   const [refreshing, setRefreshing] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
 
-  // Events and calendars (mock; replaced by real data in Task 11)
-  const [events] = useState<Event[]>(MOCK_EVENTS);
-  const [todos] = useState<Todo[]>(MOCK_TODOS);
-  const [calendars] = useState<Calendar[]>(MOCK_CALENDARS);
+  // Demo UI data remains local, but widget sync now uses a dedicated data source.
+  const demoData = useMemo(() => createDemoCalendarData(), []);
+  const events = demoData.events as Event[];
+  const todos = demoData.todos as Todo[];
+  const calendars = demoData.calendars as Calendar[];
+
+  useEffect(() => {
+    if (route.params?.initialView) {
+      setCurrentView(route.params.initialView);
+    }
+    if (route.params?.focusDate === 'today') {
+      setCurrentDate(new Date());
+    } else if (route.params?.focusDate) {
+      const nextDate = new Date(route.params.focusDate);
+      if (!Number.isNaN(nextDate.getTime())) {
+        setCurrentDate(nextDate);
+      }
+    }
+  }, [route.params?.focusDate, route.params?.initialView]);
 
   // Reschedule notifications and refresh widget whenever data changes
   useEffect(() => {
@@ -232,9 +118,7 @@ export default function CalendarScreen({
       try {
         await cancelAllScheduledNotifications();
         await scheduleNotificationsForItems(events, todos, calendars);
-        // Keep the home-screen widget in sync after any data change
-        // (covers: event create/edit/delete, todo toggle, pull-to-refresh)
-        await broadcastWidgetRefresh(events, todos, calendars);
+        await syncWidgetData();
         setFetchError(null);
       } catch (err) {
         const message =
@@ -251,8 +135,9 @@ export default function CalendarScreen({
   const handleRefresh = useCallback(() => {
     setRefreshing(true);
     setFetchError(null);
-    // Simulate async data refresh (replace with real Supabase query in Task 11).
-    // broadcastWidgetRefresh is called automatically by the data-change effect above.
+    void syncWidgetData().catch(() => {
+      // CalendarScreen already surfaces fetch errors through the effect.
+    });
     setTimeout(() => {
       setRefreshing(false);
     }, 600);

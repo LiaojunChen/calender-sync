@@ -10,6 +10,8 @@ out/
 android/
 ios/
 .expo/
+!apps/mobile/android/
+!apps/mobile/android/**
 
 # Environment files
 .env

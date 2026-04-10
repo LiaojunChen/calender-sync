@@ -19,7 +19,7 @@
 //  └─────────────────┘
 // ============================================================
 
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   Pressable,
   StyleSheet,
@@ -40,15 +40,6 @@ import TodoScreen from '../screens/TodoScreen';
 import type { RootStackParamList } from './AppNavigator';
 
 // ---------------------------------------------------------------------------
-// Param list
-// ---------------------------------------------------------------------------
-
-export type DrawerParamList = {
-  CalendarTab: undefined;
-  TodoTab: undefined;
-};
-
-// ---------------------------------------------------------------------------
 // View types
 // ---------------------------------------------------------------------------
 
@@ -58,6 +49,15 @@ const VIEW_LABELS: Record<ViewType, string> = {
   week: '周视图',
   day: '日视图',
   agenda: '议程视图',
+};
+
+// ---------------------------------------------------------------------------
+// Param list
+// ---------------------------------------------------------------------------
+
+export type DrawerParamList = {
+  CalendarTab: { initialView?: ViewType; focusDate?: string } | undefined;
+  TodoTab: undefined;
 };
 
 // ---------------------------------------------------------------------------
@@ -84,10 +84,16 @@ function CustomDrawerContent(
   props: DrawerContentComponentProps,
 ): React.JSX.Element {
   const { colors } = useTheme();
-  const [activeView, setActiveView] = useState<ViewType>('week');
+  const activeCalendarRoute = props.state.routes.find((route) => route.name === 'CalendarTab');
+  const routeView = (activeCalendarRoute?.params as DrawerParamList['CalendarTab'])?.initialView ?? 'month';
+  const [activeView, setActiveView] = useState<ViewType>(routeView);
   const [calendars, setCalendars] = useState<CalendarItem[]>(DEFAULT_CALENDARS);
   // Access root stack navigator to navigate to Settings
   const rootNavigation = useNavigation<StackNavigationProp<RootStackParamList>>();
+
+  useEffect(() => {
+    setActiveView(routeView);
+  }, [routeView]);
 
   const toggleCalendar = useCallback((id: string) => {
     setCalendars((prev) =>
@@ -120,7 +126,11 @@ function CustomDrawerContent(
             activeView === v && { backgroundColor: colors.accentLight },
             pressed && activeView !== v && { backgroundColor: colors.bgSecondary },
           ]}
-          onPress={() => setActiveView(v)}
+          onPress={() => {
+            setActiveView(v);
+            props.navigation.navigate('CalendarTab', { initialView: v });
+            props.navigation.closeDrawer();
+          }}
           accessibilityLabel={VIEW_LABELS[v]}
         >
           <View
@@ -229,14 +239,16 @@ function CustomDrawerContent(
 // Header component with access to root navigator
 // ---------------------------------------------------------------------------
 
-function DrawerHeader({ navigation }: { navigation: { openDrawer: () => void } }): React.JSX.Element {
+function DrawerHeader(
+  { navigation }: { navigation: { openDrawer: () => void; navigate: (screen: 'CalendarTab', params?: DrawerParamList['CalendarTab']) => void } },
+): React.JSX.Element {
   const rootNav = useNavigation<StackNavigationProp<RootStackParamList>>();
   return (
     <TopBar
       onMenuPress={() => navigation.openDrawer()}
       onSearchPress={() => rootNav.navigate('Search')}
       onTodayPress={() => {
-        // Handled by CalendarScreen
+        navigation.navigate('CalendarTab', { focusDate: 'today' });
       }}
     />
   );

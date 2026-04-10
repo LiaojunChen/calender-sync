@@ -24,6 +24,7 @@ import {
 } from '@project-calendar/shared';
 import type { CalendarRow, EventRow, ReminderRow } from '@project-calendar/shared';
 import { getSupabaseClientOrNull, SUPABASE_CONFIG_ERROR } from '../lib/supabase';
+import { syncWidgetData } from '../widget/widgetSync';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -143,6 +144,9 @@ export default function EventDetailScreen(): React.JSX.Element {
                 Alert.alert('删除失败', result.error);
                 return;
               }
+              await syncWidgetData().catch((error: unknown) => {
+                console.warn('widget sync failed after event delete', error);
+              });
               navigation.goBack();
             })();
           },

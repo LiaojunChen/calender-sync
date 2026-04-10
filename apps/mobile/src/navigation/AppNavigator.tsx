@@ -14,11 +14,12 @@
 // ============================================================
 
 import React from 'react';
+import type { NavigatorScreenParams } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Text } from 'react-native';
 import { useTheme } from '../hooks/useTheme';
-import DrawerNavigator from './DrawerNavigator';
+import DrawerNavigator, { type DrawerParamList } from './DrawerNavigator';
 import TodoScreen from '../screens/TodoScreen';
 import EventFormScreen from '../screens/EventFormScreen';
 import TodoFormScreen from '../screens/TodoFormScreen';
@@ -31,7 +32,7 @@ import SearchScreen from '../screens/SearchScreen';
 // ---------------------------------------------------------------------------
 
 export type RootStackParamList = {
-  Main: undefined;
+  Main: NavigatorScreenParams<BottomTabParamList> | undefined;
   EventForm: { eventId?: string } | undefined;
   EventDetail: { eventId: string };
   TodoForm: { todoId?: string } | undefined;
@@ -40,7 +41,7 @@ export type RootStackParamList = {
 };
 
 export type BottomTabParamList = {
-  Calendar: undefined;
+  Calendar: NavigatorScreenParams<DrawerParamList> | undefined;
   Todos: undefined;
 };
 

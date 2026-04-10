@@ -7,7 +7,7 @@
 //  else           → LoginScreen
 // ============================================================
 
-import React from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { DarkTheme, DefaultTheme } from '@react-navigation/native';
@@ -15,10 +15,14 @@ import { useTheme } from '../hooks/useTheme';
 import { useAuth } from '../hooks/useAuth';
 import LoginScreen from '../screens/LoginScreen';
 import AppNavigator from './AppNavigator';
+import { isSupabaseConfigured } from '../lib/supabase';
+import { createWidgetLinking } from './widgetLinks';
+import { syncWidgetData } from '../widget/widgetSync';
 
 export default function RootNavigator(): React.JSX.Element {
   const { colors, isDark } = useTheme();
   const { status } = useAuth();
+  const linking = useMemo(() => createWidgetLinking(isSupabaseConfigured), []);
 
   const navTheme = isDark
     ? {
@@ -46,6 +50,15 @@ export default function RootNavigator(): React.JSX.Element {
         },
       };
 
+  useEffect(() => {
+    if (status !== 'authenticated') {
+      return;
+    }
+    void syncWidgetData().catch((error: unknown) => {
+      console.warn('widget sync failed', error);
+    });
+  }, [status]);
+
   if (status === 'loading') {
     return (
       <View
@@ -57,7 +70,7 @@ export default function RootNavigator(): React.JSX.Element {
   }
 
   return (
-    <NavigationContainer theme={navTheme}>
+    <NavigationContainer theme={navTheme} linking={linking}>
       {status === 'authenticated' ? <AppNavigator /> : <LoginScreen />}
     </NavigationContainer>
   );

@@ -1,72 +1,39 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!--
-  Android manifest for the Project Calendar mobile app.
-  This file is the Expo bare-workflow manifest; it is NOT auto-generated
-  and must be maintained manually when adding native features.
-
-  Package: com.projectcalendar.mobile
--->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-
-    <!-- ── Permissions ── -->
-    <uses-permission android:name="android.permission.INTERNET" />
-    <uses-permission android:name="android.permission.VIBRATE" />
-    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
-
-    <application
-        android:name=".MainApplication"
-        android:label="@string/app_name"
-        android:icon="@mipmap/ic_launcher"
-        android:roundIcon="@mipmap/ic_launcher_round"
-        android:allowBackup="false"
-        android:theme="@style/AppTheme"
-        android:supportsRtl="true">
-
-        <!-- ── Main activity ── -->
-        <activity
-            android:name=".MainActivity"
-            android:label="@string/app_name"
-            android:configChanges="keyboard|keyboardHidden|orientation|screenLayout|screenSize|smallestScreenSize|uiMode"
-            android:launchMode="singleTask"
-            android:windowSoftInputMode="adjustResize"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-            <!-- Deep-link scheme used by the widget to open specific screens -->
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="projectcalendar" />
-            </intent-filter>
-        </activity>
-
-        <!-- ── Widget: CalendarWidgetService (RemoteViewsService) ── -->
-        <!--
-          The service provides the RemoteViewsFactory that populates the
-          scrollable ListView inside the widget.  BIND_REMOTEVIEWS permission
-          restricts access to the system only.
-        -->
-        <service
-            android:name=".widget.CalendarWidgetService"
-            android:permission="android.permission.BIND_REMOTEVIEWS"
-            android:exported="false" />
-
-        <!-- ── Widget: CalendarWidgetProvider (AppWidgetProvider) ── -->
-        <receiver
-            android:name=".widget.CalendarWidgetProvider"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-                <!-- Custom broadcast so RN can trigger an immediate redraw -->
-                <action android:name="com.projectcalendar.mobile.widget.ACTION_WIDGET_REFRESH" />
-            </intent-filter>
-            <meta-data
-                android:name="android.appwidget.provider"
-                android:resource="@xml/widget_info" />
-        </receiver>
-
-    </application>
+  <uses-permission android:name="android.permission.INTERNET"/>
+  <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
+  <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW"/>
+  <uses-permission android:name="android.permission.VIBRATE"/>
+  <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
+  <queries>
+    <intent>
+      <action android:name="android.intent.action.VIEW"/>
+      <category android:name="android.intent.category.BROWSABLE"/>
+      <data android:scheme="https"/>
+    </intent>
+  </queries>
+  <application android:name=".MainApplication" android:label="@string/app_name" android:icon="@mipmap/ic_launcher" android:roundIcon="@mipmap/ic_launcher_round" android:allowBackup="true" android:theme="@style/AppTheme" android:supportsRtl="true" android:enableOnBackInvokedCallback="false" android:fullBackupContent="@xml/secure_store_backup_rules" android:dataExtractionRules="@xml/secure_store_data_extraction_rules">
+    <meta-data android:name="expo.modules.updates.ENABLED" android:value="false"/>
+    <meta-data android:name="expo.modules.updates.EXPO_UPDATES_CHECK_ON_LAUNCH" android:value="ALWAYS"/>
+    <meta-data android:name="expo.modules.updates.EXPO_UPDATES_LAUNCH_WAIT_MS" android:value="0"/>
+    <activity android:name=".MainActivity" android:configChanges="keyboard|keyboardHidden|orientation|screenSize|screenLayout|uiMode" android:launchMode="singleTask" android:windowSoftInputMode="adjustResize" android:theme="@style/Theme.App.SplashScreen" android:exported="true" android:screenOrientation="portrait">
+      <intent-filter>
+        <action android:name="android.intent.action.MAIN"/>
+        <category android:name="android.intent.category.LAUNCHER"/>
+      </intent-filter>
+      <intent-filter>
+        <action android:name="android.intent.action.VIEW"/>
+        <category android:name="android.intent.category.DEFAULT"/>
+        <category android:name="android.intent.category.BROWSABLE"/>
+        <data android:scheme="projectcalendar"/>
+      </intent-filter>
+    </activity>
+    <service android:name=".widget.CalendarWidgetService" android:permission="android.permission.BIND_REMOTEVIEWS" android:exported="false"/>
+    <receiver android:name=".widget.CalendarWidgetProvider" android:exported="true">
+      <intent-filter>
+        <action android:name="android.appwidget.action.APPWIDGET_UPDATE"/>
+        <action android:name="com.projectcalendar.mobile.widget.ACTION_WIDGET_REFRESH"/>
+      </intent-filter>
+      <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_info"/>
+    </receiver>
+  </application>
 </manifest>
