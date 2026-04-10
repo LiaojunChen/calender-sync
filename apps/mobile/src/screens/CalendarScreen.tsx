@@ -36,12 +36,29 @@ import MonthView from '../components/calendar/MonthView';
 import WeekView from '../components/calendar/WeekView';
 import DayView from '../components/calendar/DayView';
 import AgendaView from '../components/calendar/AgendaView';
-import { addDays, addMonths, startOfWeek, type Calendar } from '@project-calendar/shared';
+import {
+  addDays,
+  addMonths,
+  endOfMonth,
+  endOfWeek,
+  getEventExceptions,
+  getRecurrenceRule,
+  startOfMonth,
+  startOfWeek,
+  type Calendar,
+  type EventExceptionRow,
+} from '@project-calendar/shared';
 import {
   cancelAllScheduledNotifications,
   scheduleNotificationsForItems,
 } from '../notifications/scheduler';
 import { useAppData } from '../hooks/useAppData';
+import { getSupabaseClientOrNull, isSupabaseConfigured } from '../lib/supabase';
+import {
+  expandCalendarEvents,
+  type CalendarEventException,
+  type EventWithRrule,
+} from '../data/expandedEventsCore';
 import { syncWidgetData } from '../widget/widgetSync';
 import type { DrawerParamList } from '../navigation/DrawerNavigator';
 
@@ -96,6 +113,51 @@ function buildHeaderTitle(date: Date): string {
   return `${date.getFullYear()}年${date.getMonth() + 1}月`;
 }
 
+function getViewRange(view: ViewType, currentDate: Date): { start: Date; end: Date } {
+  switch (view) {
+    case 'day': {
+      const start = new Date(currentDate);
+      start.setHours(0, 0, 0, 0);
+      start.setDate(start.getDate() - 30);
+      const end = new Date(currentDate);
+      end.setHours(23, 59, 59, 999);
+      end.setDate(end.getDate() + 30);
+      return { start, end };
+    }
+    case 'week': {
+      const weekStart = startOfWeek(currentDate, 1);
+      const start = addDays(weekStart, -30);
+      const weekEnd = endOfWeek(currentDate, 1);
+      const end = addDays(weekEnd, 30);
+      return { start, end };
+    }
+    case 'month': {
+      const monthStart = startOfMonth(currentDate);
+      const start = addDays(monthStart, -35);
+      const monthEnd = endOfMonth(currentDate);
+      const end = addDays(monthEnd, 35);
+      return { start, end };
+    }
+    case 'agenda':
+    default: {
+      const start = addMonths(currentDate, -1);
+      const end = addMonths(currentDate, 3);
+      return { start, end };
+    }
+  }
+}
+
+function mapExceptionRow(row: EventExceptionRow): CalendarEventException {
+  return {
+    event_id: row.event_id,
+    original_date: row.original_date,
+    action: row.action,
+    modified_title: row.modified_title,
+    modified_start_time: row.modified_start_time,
+    modified_end_time: row.modified_end_time,
+  };
+}
+
 export default function CalendarScreen({
   calendarsOverride,
 }: CalendarScreenProps): React.JSX.Element {
@@ -117,6 +179,8 @@ export default function CalendarScreen({
     refresh,
   } = useAppData();
   const effectiveCalendars = calendarsOverride ?? calendars;
+  const [recurrenceRules, setRecurrenceRules] = useState<Record<string, string>>({});
+  const [recurrenceExceptions, setRecurrenceExceptions] = useState<CalendarEventException[]>([]);
 
   useEffect(() => {
     if (route.params?.initialView) {
@@ -140,6 +204,89 @@ export default function CalendarScreen({
     navigation.setParams({ headerTitle: nextTitle });
   }, [currentDate, navigation, route.params?.headerTitle]);
 
+  useEffect(() => {
+    const recurringEvents = events.filter((event) => event.recurrence_rule_id);
+    if (!isSupabaseConfigured || recurringEvents.length === 0) {
+      setRecurrenceRules({});
+      setRecurrenceExceptions([]);
+      return;
+    }
+
+    const client = getSupabaseClientOrNull();
+    if (!client) {
+      setRecurrenceRules({});
+      setRecurrenceExceptions([]);
+      return;
+    }
+
+    let active = true;
+
+    void (async () => {
+      try {
+        const [ruleEntries, exceptionEntries] = await Promise.all([
+          Promise.all(
+            recurringEvents.map(async (event) => {
+              if (!event.recurrence_rule_id) {
+                return null;
+              }
+              const result = await getRecurrenceRule(client, event.recurrence_rule_id);
+              if (!result.data?.rrule_string) {
+                return null;
+              }
+              return [event.id, result.data.rrule_string] as const;
+            }),
+          ),
+          Promise.all(
+            recurringEvents.map(async (event) => {
+              const result = await getEventExceptions(client, event.id);
+              return result.data ?? [];
+            }),
+          ),
+        ]);
+
+        if (!active) {
+          return;
+        }
+
+        setRecurrenceRules(
+          Object.fromEntries(
+            ruleEntries.filter(
+              (entry): entry is readonly [string, string] => entry !== null,
+            ),
+          ),
+        );
+        setRecurrenceExceptions(exceptionEntries.flat().map(mapExceptionRow));
+      } catch (error) {
+        if (!active) {
+          return;
+        }
+        setSyncError(error instanceof Error ? error.message : '加载重复日程失败');
+      }
+    })();
+
+    return () => {
+      active = false;
+    };
+  }, [events]);
+
+  const viewRange = useMemo(
+    () => getViewRange(currentView, currentDate),
+    [currentView, currentDate],
+  );
+  const displayEvents = useMemo(() => {
+    const enrichedEvents: EventWithRrule[] = events.map((event) => ({
+      ...event,
+      rrule_string: recurrenceRules[event.id] ?? null,
+    }));
+
+    return expandCalendarEvents(
+      enrichedEvents,
+      viewRange.start,
+      viewRange.end,
+      recurrenceExceptions,
+    );
+  }, [events, recurrenceRules, recurrenceExceptions, viewRange]);
+
   // Reschedule notifications and refresh widget whenever data changes
   useEffect(() => {
     if (loading) return;
@@ -147,7 +294,7 @@ export default function CalendarScreen({
     void (async () => {
       try {
         await cancelAllScheduledNotifications();
-        await scheduleNotificationsForItems(events, todos, effectiveCalendars);
+        await scheduleNotificationsForItems(displayEvents, todos, effectiveCalendars);
         await syncWidgetData();
         setSyncError(null);
       } catch (err) {
@@ -159,7 +306,7 @@ export default function CalendarScreen({
         ]);
       }
     })();
-  }, [events, todos, effectiveCalendars, loading]);
+  }, [displayEvents, todos, effectiveCalendars, loading]);
 
   // Refresh handler
   const handleRefresh = useCallback(() => {
@@ -238,7 +385,7 @@ export default function CalendarScreen({
         return (
           <MonthView
             currentDate={currentDate}
-            events={events}
+            events={displayEvents}
             todos={todos}
             calendars={effectiveCalendars}
             refreshing={refreshing}
@@ -250,7 +397,7 @@ export default function CalendarScreen({
         return (
           <WeekView
             currentDate={currentDate}
-            events={events}
+            events={displayEvents}
             calendars={effectiveCalendars}
             refreshing={refreshing}
             onRefresh={handleRefresh}
@@ -261,7 +408,7 @@ export default function CalendarScreen({
         return (
           <DayView
             currentDate={currentDate}
-            events={events}
+            events={displayEvents}
             calendars={effectiveCalendars}
             refreshing={refreshing}
             onRefresh={handleRefresh}
@@ -271,7 +418,7 @@ export default function CalendarScreen({
         return (
           <AgendaView
             currentDate={currentDate}
-            events={events}
+            events={displayEvents}
             todos={todos}
             calendars={effectiveCalendars}
             refreshing={refreshing}
@@ -282,7 +429,7 @@ export default function CalendarScreen({
   }, [
     currentView,
     currentDate,
-    events,
+    displayEvents,
     todos,
     effectiveCalendars,
     refreshing,
