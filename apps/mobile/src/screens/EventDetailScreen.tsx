@@ -23,7 +23,7 @@ import {
   softDeleteEvent,
 } from '@project-calendar/shared';
 import type { CalendarRow, EventRow, ReminderRow } from '@project-calendar/shared';
-import { supabase } from '../lib/supabase';
+import { getSupabaseClientOrNull, SUPABASE_CONFIG_ERROR } from '../lib/supabase';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -80,6 +80,7 @@ export default function EventDetailScreen(): React.JSX.Element {
   const navigation = useNavigation<EventDetailNavProp>();
   const route = useRoute<EventDetailRouteProp>();
   const { eventId } = route.params;
+  const supabase = getSupabaseClientOrNull();
 
   const [event, setEvent] = useState<EventRow | null>(null);
   const [calendar, setCalendar] = useState<CalendarRow | null>(null);
@@ -88,6 +89,13 @@ export default function EventDetailScreen(): React.JSX.Element {
   const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
+    if (!supabase) {
+      Alert.alert('演示模式', `${SUPABASE_CONFIG_ERROR}\n\n演示模式下暂不支持查看云端详情。`, [
+        { text: '确定', onPress: () => navigation.goBack() },
+      ]);
+      return;
+    }
+
     void (async () => {
       setLoading(true);
       const [evResult, calsResult, remResult] = await Promise.all([
@@ -107,13 +115,17 @@ export default function EventDetailScreen(): React.JSX.Element {
       }
       setLoading(false);
     })();
-  }, [eventId]);
+  }, [eventId, navigation, supabase]);
 
   const handleEdit = useCallback(() => {
     navigation.navigate('EventForm', { eventId });
   }, [navigation, eventId]);
 
   const handleDelete = useCallback(() => {
+    if (!supabase) {
+      Alert.alert('演示模式', '当前预览模式不支持删除日程。');
+      return;
+    }
     Alert.alert(
       '删除日程',
       '确定要删除此日程吗？此操作可以在删除后5秒内撤销。',
@@ -137,7 +149,7 @@ export default function EventDetailScreen(): React.JSX.Element {
         },
       ],
     );
-  }, [eventId, navigation]);
+  }, [eventId, navigation, supabase]);
 
   if (loading) {
     return (

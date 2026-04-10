@@ -28,7 +28,7 @@ import {
   validateEvent,
 } from '@project-calendar/shared';
 import type { CalendarRow, EventInsert, EventUpdate } from '@project-calendar/shared';
-import { supabase } from '../lib/supabase';
+import { getSupabaseClientOrNull, SUPABASE_CONFIG_ERROR } from '../lib/supabase';
 import { DEFAULT_REMINDER_OFFSETS } from '../notifications/scheduler';
 
 // ---------------------------------------------------------------------------
@@ -129,6 +129,7 @@ export default function EventFormScreen(): React.JSX.Element {
   const route = useRoute<EventFormRouteProp>();
   const eventId = route.params?.eventId;
   const isEditing = Boolean(eventId);
+  const supabase = getSupabaseClientOrNull();
 
   // ---- form state ----
   const [title, setTitle] = useState('');
@@ -160,6 +161,13 @@ export default function EventFormScreen(): React.JSX.Element {
 
   // ---- load calendars ----
   useEffect(() => {
+    if (!supabase) {
+      Alert.alert('演示模式', `${SUPABASE_CONFIG_ERROR}\n\n演示模式下暂不支持新建或编辑日程。`, [
+        { text: '确定', onPress: () => navigation.goBack() },
+      ]);
+      return;
+    }
+
     void (async () => {
       setLoading(true);
       const result = await getCalendars(supabase);
@@ -173,11 +181,11 @@ export default function EventFormScreen(): React.JSX.Element {
       setLoading(false);
     })();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [calendarId, navigation, supabase]);
 
   // ---- load event if editing ----
   useEffect(() => {
-    if (!eventId) return;
+    if (!eventId || !supabase) return;
     void (async () => {
       setLoading(true);
       const [evResult, remResult] = await Promise.all([
@@ -202,10 +210,15 @@ export default function EventFormScreen(): React.JSX.Element {
       }
       setLoading(false);
     })();
-  }, [eventId]);
+  }, [eventId, supabase]);
 
   // ---- save ----
   const handleSave = useCallback(async () => {
+    if (!supabase) {
+      Alert.alert('演示模式', '当前预览模式不支持保存日程。');
+      return;
+    }
+
     // Build datetime strings
     const startIso = isAllDay
       ? `${startDateStr}T00:00:00.000Z`
@@ -295,6 +308,7 @@ export default function EventFormScreen(): React.JSX.Element {
     color,
     reminderOffsets,
     navigation,
+    supabase,
   ]);
 
   const addReminder = useCallback(() => {

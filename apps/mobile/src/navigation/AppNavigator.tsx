@@ -163,20 +163,24 @@ import { View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
 import FAB from '../components/layout/FAB';
+import { useAuth } from '../hooks/useAuth';
 
 type MainNavProp = StackNavigationProp<RootStackParamList>;
 
 function BottomTabNavigatorWithFAB(): React.JSX.Element {
   const { colors } = useTheme();
+  const { isDemoMode } = useAuth();
   const navigation = useNavigation<MainNavProp>();
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <BottomTabNavigator />
-      <FAB
-        onNewEvent={() => navigation.navigate('EventForm')}
-        onNewTodo={() => navigation.navigate('TodoForm')}
-      />
+      {!isDemoMode ? (
+        <FAB
+          onNewEvent={() => navigation.navigate('EventForm')}
+          onNewTodo={() => navigation.navigate('TodoForm')}
+        />
+      ) : null}
     </View>
   );
 }

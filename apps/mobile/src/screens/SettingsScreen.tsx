@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { useTheme } from '../hooks/useTheme';
 import { useAuth } from '../hooks/useAuth';
-import { supabase } from '../lib/supabase';
+import { requireSupabaseClient } from '../lib/supabase';
 import { updateUserSettings } from '@project-calendar/shared';
 import type { ThemeMode } from '../components/common/ThemeProvider';
 
@@ -135,7 +135,7 @@ function RadioGroup<T extends string | number>({
 
 export default function SettingsScreen(): React.JSX.Element {
   const { colors, mode, setMode } = useTheme();
-  const { signOut, status } = useAuth();
+  const { signOut, status, isDemoMode } = useAuth();
 
   // Settings state (defaults)
   const [defaultView, setDefaultView] = useState<ViewType>('week');
@@ -163,9 +163,9 @@ export default function SettingsScreen(): React.JSX.Element {
     // Apply theme immediately
     setMode(mode as ThemeMode);
 
-    if (status === 'authenticated') {
+    if (status === 'authenticated' && !isDemoMode) {
       try {
-        await updateUserSettings(supabase, {
+        await updateUserSettings(requireSupabaseClient(), {
           default_view: defaultView,
           week_start_day: weekStartDay,
           default_event_duration: defaultDuration,
@@ -182,7 +182,7 @@ export default function SettingsScreen(): React.JSX.Element {
 
     setSaving(false);
     setTimeout(() => setSavedMsg(''), 2000);
-  }, [defaultView, weekStartDay, defaultDuration, mode, reminderOffsets, status, setMode]);
+  }, [defaultView, weekStartDay, defaultDuration, mode, reminderOffsets, status, isDemoMode, setMode]);
 
   return (
     <ScrollView
@@ -289,9 +289,15 @@ export default function SettingsScreen(): React.JSX.Element {
       {/* Logout */}
       <Pressable
         style={[styles.logoutBtn, { backgroundColor: colors.danger }]}
-        onPress={() => void signOut()}
+        onPress={() => {
+          if (isDemoMode) {
+            Alert.alert('演示模式', '当前为演示模式，无需退出登录。');
+            return;
+          }
+          void signOut();
+        }}
       >
-        <Text style={styles.logoutText}>退出登录</Text>
+        <Text style={styles.logoutText}>{isDemoMode ? '演示模式' : '退出登录'}</Text>
       </Pressable>
     </ScrollView>
   );

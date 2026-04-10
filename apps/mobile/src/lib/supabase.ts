@@ -32,6 +32,9 @@ const ExpoSecureStoreAdapter = {
 
 const SUPABASE_URL = process.env['EXPO_PUBLIC_SUPABASE_URL'] ?? '';
 const SUPABASE_ANON_KEY = process.env['EXPO_PUBLIC_SUPABASE_ANON_KEY'] ?? '';
+export const isSupabaseConfigured = SUPABASE_URL.length > 0 && SUPABASE_ANON_KEY.length > 0;
+export const SUPABASE_CONFIG_ERROR =
+  '未配置 Supabase。请在 apps/mobile/.env 中设置 EXPO_PUBLIC_SUPABASE_URL 和 EXPO_PUBLIC_SUPABASE_ANON_KEY。';
 
 // ---------------------------------------------------------------------------
 // Client singleton
@@ -39,8 +42,8 @@ const SUPABASE_ANON_KEY = process.env['EXPO_PUBLIC_SUPABASE_ANON_KEY'] ?? '';
 
 let _client: TypedSupabaseClient | null = null;
 
-export function getSupabaseClient(): TypedSupabaseClient {
-  if (!_client) {
+export function getSupabaseClientOrNull(): TypedSupabaseClient | null {
+  if (!_client && isSupabaseConfigured) {
     _client = createSupabaseClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
       auth: {
         storage: ExpoSecureStoreAdapter,
@@ -53,4 +56,10 @@ export function getSupabaseClient(): TypedSupabaseClient {
   return _client;
 }
 
-export const supabase = getSupabaseClient();
+export function requireSupabaseClient(): TypedSupabaseClient {
+  const client = getSupabaseClientOrNull();
+  if (!client) {
+    throw new Error(SUPABASE_CONFIG_ERROR);
+  }
+  return client;
+}

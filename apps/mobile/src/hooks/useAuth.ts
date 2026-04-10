@@ -10,7 +10,7 @@ import {
   signOut as sharedSignOut,
   onAuthStateChange,
 } from '@project-calendar/shared';
-import { supabase } from '../lib/supabase';
+import { getSupabaseClientOrNull, isSupabaseConfigured } from '../lib/supabase';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -26,6 +26,7 @@ export interface AuthState {
 }
 
 export interface UseAuthReturn extends AuthState {
+  isDemoMode: boolean;
   signIn: (email: string, password: string) => Promise<boolean>;
   signUp: (email: string, password: string, displayName?: string) => Promise<boolean>;
   signOut: () => Promise<void>;
@@ -38,14 +39,36 @@ export interface UseAuthReturn extends AuthState {
 
 export function useAuth(): UseAuthReturn {
   const [state, setState] = useState<AuthState>({
-    status: 'loading',
+    status: isSupabaseConfigured ? 'loading' : 'authenticated',
     user: null,
     session: null,
     error: null,
   });
+  const isDemoMode = !isSupabaseConfigured;
 
   // Subscribe to auth state changes on mount
   useEffect(() => {
+    if (!isSupabaseConfigured) {
+      setState({
+        status: 'authenticated',
+        user: null,
+        session: null,
+        error: null,
+      });
+      return;
+    }
+
+    const supabase = getSupabaseClientOrNull();
+    if (!supabase) {
+      setState({
+        status: 'unauthenticated',
+        user: null,
+        session: null,
+        error: 'Supabase 初始化失败',
+      });
+      return;
+    }
+
     const { unsubscribe } = onAuthStateChange(supabase, (_event, session) => {
       if (session) {
         setState({
@@ -71,6 +94,14 @@ export function useAuth(): UseAuthReturn {
 
   const handleSignIn = useCallback(
     async (email: string, password: string): Promise<boolean> => {
+      if (!isSupabaseConfigured) {
+        return true;
+      }
+      const supabase = getSupabaseClientOrNull();
+      if (!supabase) {
+        setState((prev) => ({ ...prev, error: 'Supabase 初始化失败' }));
+        return false;
+      }
       setState((prev) => ({ ...prev, error: null }));
       const result = await sharedSignIn(supabase, email, password);
       if (result.error) {
@@ -91,6 +122,14 @@ export function useAuth(): UseAuthReturn {
       password: string,
       displayName?: string,
     ): Promise<boolean> => {
+      if (!isSupabaseConfigured) {
+        return true;
+      }
+      const supabase = getSupabaseClientOrNull();
+      if (!supabase) {
+        setState((prev) => ({ ...prev, error: 'Supabase 初始化失败' }));
+        return false;
+      }
       setState((prev) => ({ ...prev, error: null }));
       const result = await sharedSignUp(supabase, email, password, displayName);
       if (result.error) {
@@ -106,6 +145,13 @@ export function useAuth(): UseAuthReturn {
   );
 
   const handleSignOut = useCallback(async (): Promise<void> => {
+    if (!isSupabaseConfigured) {
+      return;
+    }
+    const supabase = getSupabaseClientOrNull();
+    if (!supabase) {
+      return;
+    }
     await sharedSignOut(supabase);
   }, []);
 
@@ -115,6 +161,7 @@ export function useAuth(): UseAuthReturn {
 
   return {
     ...state,
+    isDemoMode,
     signIn: handleSignIn,
     signUp: handleSignUp,
     signOut: handleSignOut,

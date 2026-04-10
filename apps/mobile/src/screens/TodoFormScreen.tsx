@@ -27,7 +27,7 @@ import {
   validateTodo,
 } from '@project-calendar/shared';
 import type { CalendarRow, TodoInsert, TodoUpdate } from '@project-calendar/shared';
-import { supabase } from '../lib/supabase';
+import { getSupabaseClientOrNull, SUPABASE_CONFIG_ERROR } from '../lib/supabase';
 import { DEFAULT_REMINDER_OFFSETS } from '../notifications/scheduler';
 
 // ---------------------------------------------------------------------------
@@ -59,6 +59,7 @@ export default function TodoFormScreen(): React.JSX.Element {
   const route = useRoute<TodoFormRouteProp>();
   const todoId = route.params?.todoId;
   const isEditing = Boolean(todoId);
+  const supabase = getSupabaseClientOrNull();
 
   // ---- form state ----
   const [title, setTitle] = useState('');
@@ -79,6 +80,13 @@ export default function TodoFormScreen(): React.JSX.Element {
 
   // ---- load calendars ----
   useEffect(() => {
+    if (!supabase) {
+      Alert.alert('演示模式', `${SUPABASE_CONFIG_ERROR}\n\n演示模式下暂不支持新建或编辑待办。`, [
+        { text: '确定', onPress: () => navigation.goBack() },
+      ]);
+      return;
+    }
+
     void (async () => {
       setLoading(true);
       const result = await getCalendars(supabase);
@@ -92,11 +100,11 @@ export default function TodoFormScreen(): React.JSX.Element {
       setLoading(false);
     })();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [calendarId, navigation, supabase]);
 
   // ---- load todo if editing ----
   useEffect(() => {
-    if (!todoId) return;
+    if (!todoId || !supabase) return;
     void (async () => {
       setLoading(true);
       const [todoResult, remResult] = await Promise.all([
@@ -116,10 +124,15 @@ export default function TodoFormScreen(): React.JSX.Element {
       }
       setLoading(false);
     })();
-  }, [todoId]);
+  }, [todoId, supabase]);
 
   // ---- save ----
   const handleSave = useCallback(async () => {
+    if (!supabase) {
+      Alert.alert('演示模式', '当前预览模式不支持保存待办。');
+      return;
+    }
+
     // Validate
     const validation = validateTodo({
       title,
@@ -190,6 +203,7 @@ export default function TodoFormScreen(): React.JSX.Element {
     description,
     reminderOffsets,
     navigation,
+    supabase,
   ]);
 
   const addReminder = useCallback(() => {
