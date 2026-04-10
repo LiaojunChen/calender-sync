@@ -104,7 +104,7 @@ function getViewRange(view: string, currentDate: Date): { start: Date; end: Date
 // ============================================================
 
 export default function MainArea() {
-  const { state, dispatch } = useAppContext();
+  const { state, dispatch, navigatePrev, navigateNext, navigateToday } = useAppContext();
 
   // Undo / Snackbar
   const { addUndoable, undoLast, dismissSnackbar, snackbarState } = useUndo();
@@ -231,6 +231,42 @@ export default function MainArea() {
     setCreateFormOpen(true);
     dispatch({ type: 'CLEAR_CREATE_FORM_REQUEST' });
   }, [state.pendingCreateDate, dispatch]);
+
+  // -----------------------------------------------------------
+  // Global keyboard shortcuts
+  // -----------------------------------------------------------
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      // Skip when any modal/form is open
+      if (formOpen || todoFormOpen || createFormOpen) return;
+      // Skip when focus is inside an input / textarea / select / contenteditable
+      const tag = (e.target as HTMLElement).tagName.toLowerCase();
+      if (['input', 'textarea', 'select'].includes(tag)) return;
+      if ((e.target as HTMLElement).isContentEditable) return;
+      // Skip modified keys (except standalone arrow keys)
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+
+      switch (e.key) {
+        case 'ArrowLeft':
+          e.preventDefault();
+          navigatePrev();
+          break;
+        case 'ArrowRight':
+          e.preventDefault();
+          navigateNext();
+          break;
+        case 't':
+          navigateToday();
+          break;
+        case 'n':
+          e.preventDefault();
+          dispatch({ type: 'REQUEST_CREATE_FORM', date: new Date() });
+          break;
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [formOpen, todoFormOpen, createFormOpen, navigatePrev, navigateNext, navigateToday, dispatch]);
 
   // -----------------------------------------------------------
   // Handlers: create event from time grid

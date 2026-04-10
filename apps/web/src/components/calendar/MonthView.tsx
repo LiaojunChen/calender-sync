@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useMemo, useCallback } from 'react';
+import React, { useMemo, useCallback, useRef } from 'react';
 import type { Event, Calendar, Todo } from '@project-calendar/shared';
 import {
   startOfMonth,
   startOfWeek,
   addDays,
+  addMonths,
   isSameDay,
   isSameMonth,
   isToday,
@@ -83,6 +84,20 @@ function getSpan(
 
 export default function MonthView({ currentDate, events, calendars, todos = [], onToggleTodo }: MonthViewProps) {
   const { dispatch } = useAppContext();
+
+  // ── Wheel to switch months ────────────────────────────────
+  const lastWheelAt = useRef(0);
+  const handleWheel = useCallback(
+    (e: React.WheelEvent) => {
+      e.preventDefault();
+      const now = Date.now();
+      if (now - lastWheelAt.current < 600) return; // 600ms cooldown
+      lastWheelAt.current = now;
+      const delta = e.deltaY > 0 ? 1 : -1;
+      dispatch({ type: 'SET_DATE', date: addMonths(currentDate, delta) });
+    },
+    [dispatch, currentDate],
+  );
 
   const calendarMap = useMemo(() => {
     const map = new Map<string, Calendar>();
@@ -399,7 +414,7 @@ export default function MonthView({ currentDate, events, calendars, todos = [], 
   }
 
   return (
-    <div className={styles.monthView}>
+    <div className={styles.monthView} onWheel={handleWheel}>
       {/* Day-of-week header */}
       <div className={styles.headerRow}>
         {DAY_NAMES.map((name) => (

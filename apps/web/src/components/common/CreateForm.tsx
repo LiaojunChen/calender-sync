@@ -264,13 +264,6 @@ export default function CreateForm({
     [activeTab, dueDate, dueTime, startDate, startTime],
   );
 
-  // ── Keyboard close ────────────────────────────────────────
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [onClose]);
-
   // ── Reminder helpers ──────────────────────────────────────
   const addReminder = useCallback(() => setReminderOffsets((p) => [...p, 10]), []);
   const removeReminder = useCallback(
@@ -336,6 +329,26 @@ export default function CreateForm({
     calendarId, color, reminderOffsets, rruleString,
     onSaveEvent, onSaveTodo,
   ]);
+
+  // ── Keyboard shortcuts ────────────────────────────────────
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+        return;
+      }
+      if (e.key === 'Enter') {
+        const tag = (e.target as HTMLElement).tagName.toLowerCase();
+        // Ctrl/Cmd+Enter works anywhere; plain Enter works on single-line inputs and buttons
+        if (e.ctrlKey || e.metaKey || (tag !== 'textarea' && tag !== 'select')) {
+          e.preventDefault();
+          handleSave();
+        }
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [onClose, handleSave]);
 
   // ── Icons ─────────────────────────────────────────────────
   const TodoIcon = (
