@@ -60,6 +60,7 @@ function matchesQuery(text: string | null | undefined, query: string): boolean {
 
 interface SearchResult {
   id: string;
+  entityId: string;
   kind: 'event' | 'todo';
   title: string;
   subtitle: string;
@@ -109,6 +110,7 @@ export default function SearchScreen(): React.JSX.Element {
       )
       .map((ev) => ({
         id: `event-${ev.id}`,
+        entityId: ev.id,
         kind: 'event' as const,
         title: ev.title,
         subtitle: formatEventTime(ev),
@@ -125,6 +127,7 @@ export default function SearchScreen(): React.JSX.Element {
       )
       .map((todo) => ({
         id: `todo-${todo.id}`,
+        entityId: todo.id,
         kind: 'todo' as const,
         title: todo.title,
         subtitle: formatTodoTime(todo),
@@ -143,10 +146,12 @@ export default function SearchScreen(): React.JSX.Element {
   }, [query, events, todos, calendarColorMap]);
 
   const handleResultPress = useCallback(
-    (_result: SearchResult) => {
-      // Navigate back to the calendar – result data is shown in the list,
-      // and tapping navigates back to the main screen.
-      navigation.goBack();
+    (result: SearchResult) => {
+      if (result.kind === 'event') {
+        navigation.navigate('EventDetail', { eventId: result.entityId });
+        return;
+      }
+      navigation.navigate('TodoForm', { todoId: result.entityId });
     },
     [navigation],
   );
