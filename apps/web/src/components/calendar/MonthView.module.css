@@ -9,7 +9,7 @@
 .headerRow {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  border-bottom: 1px solid var(--border-light);
+  border-bottom: 1px solid var(--border-color);
 }
 
 .headerCell {
@@ -34,8 +34,8 @@
 /* Individual date cell */
 .dateCell {
   min-height: 100px;
-  border-right: 1px solid var(--border-light);
-  border-bottom: 1px solid var(--border-light);
+  border-right: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--border-color);
   padding: 2px;
   cursor: pointer;
   transition: background-color var(--transition-fast);
