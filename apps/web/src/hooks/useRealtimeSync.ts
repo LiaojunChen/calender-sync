@@ -29,6 +29,7 @@ export function useRealtimeSync(
   supabase: TypedSupabaseClient | null,
   userId: string | null,
   dispatch: AppDispatch,
+  refreshEvents?: (() => void | Promise<void>) | null,
 ): void {
   useEffect(() => {
     if (!supabase || !userId) return;
@@ -48,6 +49,10 @@ export function useRealtimeSync(
         },
         (payload) => {
           const event = payload.new as Event;
+          if (event.recurrence_rule_id) {
+            void refreshEvents?.();
+            return;
+          }
           dispatch({ type: 'ADD_EVENT', event });
         },
       )
@@ -61,6 +66,10 @@ export function useRealtimeSync(
         },
         (payload) => {
           const event = payload.new as Event;
+          if (event.recurrence_rule_id) {
+            void refreshEvents?.();
+            return;
+          }
           if (event.deleted_at) {
             // Soft-delete treated as a removal
             dispatch({ type: 'DELETE_EVENT', id: event.id });
@@ -78,8 +87,36 @@ export function useRealtimeSync(
           filter,
         },
         (payload) => {
-          const id = (payload.old as { id?: string }).id;
-          if (id) dispatch({ type: 'DELETE_EVENT', id });
+          const oldEvent = payload.old as { id?: string; recurrence_rule_id?: string | null };
+          if (oldEvent.recurrence_rule_id) {
+            void refreshEvents?.();
+            return;
+          }
+          if (oldEvent.id) dispatch({ type: 'DELETE_EVENT', id: oldEvent.id });
+        },
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'recurrence_rules',
+          filter,
+        },
+        () => {
+          void refreshEvents?.();
+        },
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'event_exceptions',
+          filter,
+        },
+        () => {
+          void refreshEvents?.();
         },
       )
       // ---- todos ----
@@ -171,5 +208,5 @@ export function useRealtimeSync(
     return () => {
       void supabase.removeChannel(channel);
     };
-  }, [supabase, userId, dispatch]);
+  }, [supabase, userId, dispatch, refreshEvents]);
 }

@@ -139,20 +139,65 @@ export default function MainArea() {
 
   // Undo / Snackbar
   const { addUndoable, undoLast, dismissSnackbar, snackbarState } = useUndo();
-
-  // Realtime sync: keep local state in sync with server changes
-  useRealtimeSync(
-    state.isAuthenticated ? getSupabaseClient() : null,
-    state.userId,
-    dispatch,
-  );
-
   // Use real calendars if available, fall back to demo
   const calendars = state.calendars.length > 0 ? state.calendars : DEMO_CALENDARS;
   // isDemoMode: true when using local demo calendars (no real Supabase account)
   const isDemoMode = state.userId === 'demo-user' || state.calendars.length === 0;
   // Expanded-instance exceptions used by both demo mode and persisted DB-backed rules.
   const [localExceptions, setLocalExceptions] = useState<LocalException[]>([]);
+
+  const refreshRemoteEvents = useCallback(async () => {
+    if (isDemoMode || !state.isAuthenticated) return;
+    const client = getSupabaseClient();
+    if (!client) return;
+
+    const result = await apiGetEvents(client);
+    if (!result.data) return;
+
+    const fetchedEvents = result.data as unknown as EventWithRrule[];
+    const recurringEvents = fetchedEvents.filter((event) => event.recurrence_rule_id);
+
+    const [ruleEntries, exceptionEntries] = await Promise.all([
+      Promise.all(
+        recurringEvents.map(async (event) => {
+          if (!event.recurrence_rule_id) return null;
+          const ruleResult = await apiGetRecurrenceRule(client, event.recurrence_rule_id);
+          if (!ruleResult.data?.rrule_string) return null;
+          return [event.id, ruleResult.data.rrule_string] as const;
+        }),
+      ),
+      Promise.all(
+        recurringEvents.map(async (event) => {
+          const exceptionResult = await apiGetEventExceptions(client, event.id);
+          return exceptionResult.data ?? [];
+        }),
+      ),
+    ]);
+
+    const ruleMap = new Map(
+      ruleEntries.filter((entry): entry is readonly [string, string] => entry !== null),
+    );
+
+    const enrichedEvents = fetchedEvents.map((event) => {
+      const rruleString = ruleMap.get(event.id);
+      return rruleString
+        ? ({ ...event, rrule_string: rruleString } as EventWithRrule)
+        : event;
+    });
+
+    dispatch({ type: 'SET_EVENTS', events: enrichedEvents as unknown as Event[] });
+    setLocalExceptions(
+      exceptionEntries.flat().map((row) => mapExceptionRowToLocalException(row)),
+    );
+  }, [dispatch, isDemoMode, state.isAuthenticated]);
+
+  // Realtime sync: keep local state in sync with server changes
+  useRealtimeSync(
+    state.isAuthenticated ? getSupabaseClient() : null,
+    state.userId,
+    dispatch,
+    refreshRemoteEvents,
+  );
 
   // Events: use context state, initialize with demo events in demo mode
   useEffect(() => {
@@ -178,43 +223,43 @@ export default function MainArea() {
 
     (async () => {
       const result = await apiGetEvents(client);
-      if (result.data) {
-        const fetchedEvents = result.data as unknown as EventWithRrule[];
-        const recurringEvents = fetchedEvents.filter((event) => event.recurrence_rule_id);
+      if (!result.data) return;
 
-        const [ruleEntries, exceptionEntries] = await Promise.all([
-          Promise.all(
-            recurringEvents.map(async (event) => {
-              if (!event.recurrence_rule_id) return null;
-              const ruleResult = await apiGetRecurrenceRule(client, event.recurrence_rule_id);
-              if (!ruleResult.data?.rrule_string) return null;
-              return [event.id, ruleResult.data.rrule_string] as const;
-            }),
-          ),
-          Promise.all(
-            recurringEvents.map(async (event) => {
-              const exceptionResult = await apiGetEventExceptions(client, event.id);
-              return exceptionResult.data ?? [];
-            }),
-          ),
-        ]);
+      const fetchedEvents = result.data as unknown as EventWithRrule[];
+      const recurringEvents = fetchedEvents.filter((event) => event.recurrence_rule_id);
 
-        const ruleMap = new Map(
-          ruleEntries.filter((entry): entry is readonly [string, string] => entry !== null),
-        );
+      const [ruleEntries, exceptionEntries] = await Promise.all([
+        Promise.all(
+          recurringEvents.map(async (event) => {
+            if (!event.recurrence_rule_id) return null;
+            const ruleResult = await apiGetRecurrenceRule(client, event.recurrence_rule_id);
+            if (!ruleResult.data?.rrule_string) return null;
+            return [event.id, ruleResult.data.rrule_string] as const;
+          }),
+        ),
+        Promise.all(
+          recurringEvents.map(async (event) => {
+            const exceptionResult = await apiGetEventExceptions(client, event.id);
+            return exceptionResult.data ?? [];
+          }),
+        ),
+      ]);
 
-        const enrichedEvents = fetchedEvents.map((event) => {
-          const rruleString = ruleMap.get(event.id);
-          return rruleString
-            ? ({ ...event, rrule_string: rruleString } as EventWithRrule)
-            : event;
-        });
+      const ruleMap = new Map(
+        ruleEntries.filter((entry): entry is readonly [string, string] => entry !== null),
+      );
 
-        dispatch({ type: 'SET_EVENTS', events: enrichedEvents as unknown as Event[] });
-        setLocalExceptions(
-          exceptionEntries.flat().map((row) => mapExceptionRowToLocalException(row)),
-        );
-      }
+      const enrichedEvents = fetchedEvents.map((event) => {
+        const rruleString = ruleMap.get(event.id);
+        return rruleString
+          ? ({ ...event, rrule_string: rruleString } as EventWithRrule)
+          : event;
+      });
+
+      dispatch({ type: 'SET_EVENTS', events: enrichedEvents as unknown as Event[] });
+      setLocalExceptions(
+        exceptionEntries.flat().map((row) => mapExceptionRowToLocalException(row)),
+      );
     })();
   }, [isDemoMode, state.isAuthenticated, dispatch]);
 
