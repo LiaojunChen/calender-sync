@@ -24,7 +24,12 @@ import {
   type GestureResponderEvent,
   type PanResponderGestureState,
 } from 'react-native';
-import { useRoute, type RouteProp } from '@react-navigation/native';
+import {
+  useNavigation,
+  useRoute,
+  type RouteProp,
+} from '@react-navigation/native';
+import type { DrawerNavigationProp } from '@react-navigation/drawer';
 import { useTheme } from '../hooks/useTheme';
 import { useNetworkSync } from '../hooks/useNetworkSync';
 import MonthView from '../components/calendar/MonthView';
@@ -81,9 +86,15 @@ function navigateDate(
 // ---------------------------------------------------------------------------
 
 type CalendarRouteProp = RouteProp<DrawerParamList, 'CalendarTab'>;
+type CalendarNavProp = DrawerNavigationProp<DrawerParamList, 'CalendarTab'>;
+
+function buildHeaderTitle(date: Date): string {
+  return `${date.getFullYear()}年${date.getMonth() + 1}月`;
+}
 
 export default function CalendarScreen(): React.JSX.Element {
   const { colors } = useTheme();
+  const navigation = useNavigation<CalendarNavProp>();
   const route = useRoute<CalendarRouteProp>();
   const requestedView = route.params?.initialView ?? 'month';
 
@@ -113,6 +124,14 @@ export default function CalendarScreen(): React.JSX.Element {
       }
     }
   }, [route.params?.focusDate, route.params?.initialView]);
+
+  useEffect(() => {
+    const nextTitle = buildHeaderTitle(currentDate);
+    if (route.params?.headerTitle === nextTitle) {
+      return;
+    }
+    navigation.setParams({ headerTitle: nextTitle });
+  }, [currentDate, navigation, route.params?.headerTitle]);
 
   // Reschedule notifications and refresh widget whenever data changes
   useEffect(() => {
@@ -265,11 +284,6 @@ export default function CalendarScreen(): React.JSX.Element {
   ]);
 
   const screenError = dataError ?? syncError;
-
-  // Expose view/date change for DrawerNavigator (via context or callback ref)
-  // This stub makes the setters accessible; Task 11 will wire them properly
-  // via React context if needed.
-  void setCurrentView; // suppress unused-var lint until wired
 
   if (loading && events.length === 0 && todos.length === 0 && calendars.length === 0) {
     return (

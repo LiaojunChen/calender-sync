@@ -56,7 +56,7 @@ const VIEW_LABELS: Record<ViewType, string> = {
 // ---------------------------------------------------------------------------
 
 export type DrawerParamList = {
-  CalendarTab: { initialView?: ViewType; focusDate?: string } | undefined;
+  CalendarTab: { initialView?: ViewType; focusDate?: string; headerTitle?: string } | undefined;
   TodoTab: undefined;
 };
 
@@ -239,12 +239,20 @@ function CustomDrawerContent(
 // Header component with access to root navigator
 // ---------------------------------------------------------------------------
 
-function DrawerHeader(
-  { navigation }: { navigation: { openDrawer: () => void; navigate: (screen: 'CalendarTab', params?: DrawerParamList['CalendarTab']) => void } },
-): React.JSX.Element {
+function DrawerHeader({
+  navigation,
+  title,
+}: {
+  navigation: {
+    openDrawer: () => void;
+    navigate: (screen: 'CalendarTab', params?: DrawerParamList['CalendarTab']) => void;
+  };
+  title?: string;
+}): React.JSX.Element {
   const rootNav = useNavigation<StackNavigationProp<RootStackParamList>>();
   return (
     <TopBar
+      title={title}
       onMenuPress={() => navigation.openDrawer()}
       onSearchPress={() => rootNav.navigate('Search')}
       onTodayPress={() => {
@@ -266,9 +274,14 @@ export default function DrawerNavigator(): React.JSX.Element {
   return (
     <Drawer.Navigator
       drawerContent={(props) => <CustomDrawerContent {...props} />}
-      screenOptions={({ navigation }) => ({
+      screenOptions={({ navigation, route }) => ({
         headerShown: true,
-        header: () => <DrawerHeader navigation={navigation} />,
+        header: () => (
+          <DrawerHeader
+            navigation={navigation}
+            title={(route.params as DrawerParamList['CalendarTab'])?.headerTitle}
+          />
+        ),
         drawerStyle: {
           backgroundColor: colors.surface,
           width: 280,
