@@ -28,30 +28,8 @@ export default function LoginForm() {
       }
 
       if (!client) {
-        // No Supabase configured - enter demo mode
-        dispatch({
-          type: 'SET_AUTHENTICATED',
-          isAuthenticated: true,
-          userId: 'demo-user',
-        });
-        dispatch({ type: 'SET_LOADING', isLoading: false });
-        // Set up default calendar for demo mode
-        dispatch({
-          type: 'SET_CALENDARS',
-          calendars: [
-            {
-              id: 'default-cal',
-              user_id: 'demo-user',
-              name: '我的日历',
-              color: '#1a73e8',
-              is_visible: true,
-              is_default: true,
-              sort_order: 0,
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-            },
-          ],
-        });
+        // No Supabase configured — fall through to demo mode
+        handleDemoMode();
         return;
       }
 
@@ -87,14 +65,15 @@ export default function LoginForm() {
       userId: 'demo-user',
     });
     dispatch({ type: 'SET_LOADING', isLoading: false });
+    // Use the same IDs as DEMO_CALENDARS so demo events (which use these IDs) are visible
     dispatch({
       type: 'SET_CALENDARS',
       calendars: [
         {
-          id: 'default-cal',
+          id: 'cal-personal',
           user_id: 'demo-user',
-          name: '我的日历',
-          color: '#1a73e8',
+          name: '个人',
+          color: '#039be5',
           is_visible: true,
           is_default: true,
           sort_order: 0,
@@ -102,10 +81,10 @@ export default function LoginForm() {
           updated_at: new Date().toISOString(),
         },
         {
-          id: 'work-cal',
+          id: 'cal-work',
           user_id: 'demo-user',
           name: '工作',
-          color: '#d50000',
+          color: '#7986cb',
           is_visible: true,
           is_default: false,
           sort_order: 1,
@@ -113,9 +92,9 @@ export default function LoginForm() {
           updated_at: new Date().toISOString(),
         },
         {
-          id: 'personal-cal',
+          id: 'cal-study',
           user_id: 'demo-user',
-          name: '个人',
+          name: '学习',
           color: '#33b679',
           is_visible: true,
           is_default: false,

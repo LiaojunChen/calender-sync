@@ -118,7 +118,8 @@ export default function MainArea() {
 
   // Use real calendars if available, fall back to demo
   const calendars = state.calendars.length > 0 ? state.calendars : DEMO_CALENDARS;
-  const isDemoMode = state.calendars.length === 0;
+  // isDemoMode: true when using local demo calendars (no real Supabase account)
+  const isDemoMode = state.userId === 'demo-user' || state.calendars.length === 0;
 
   // Events: use context state, initialize with demo events in demo mode
   useEffect(() => {
