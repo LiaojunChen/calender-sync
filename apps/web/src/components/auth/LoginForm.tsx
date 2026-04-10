@@ -17,47 +17,6 @@ export default function LoginForm() {
 
   const client = getSupabaseClient();
 
-  const handleSubmit = useCallback(
-    async (e: React.FormEvent) => {
-      e.preventDefault();
-      setError(null);
-
-      if (!email.trim() || !password.trim()) {
-        setError('请填写邮箱和密码');
-        return;
-      }
-
-      if (!client) {
-        // No Supabase configured — fall through to demo mode
-        handleDemoMode();
-        return;
-      }
-
-      setLoading(true);
-
-      try {
-        const result = isSignUp
-          ? await signUp(client, email, password, displayName || undefined)
-          : await signIn(client, email, password);
-
-        if (result.error) {
-          setError(result.error.message);
-        } else if (result.user) {
-          dispatch({
-            type: 'SET_AUTHENTICATED',
-            isAuthenticated: true,
-            userId: result.user.id,
-          });
-        }
-      } catch (err) {
-        setError(err instanceof Error ? err.message : '操作失败');
-      } finally {
-        setLoading(false);
-      }
-    },
-    [client, email, password, displayName, isSignUp, dispatch]
-  );
-
   const handleDemoMode = useCallback(() => {
     dispatch({
       type: 'SET_AUTHENTICATED',
@@ -105,6 +64,47 @@ export default function LoginForm() {
       ],
     });
   }, [dispatch]);
+
+  const handleSubmit = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
+      setError(null);
+
+      if (!email.trim() || !password.trim()) {
+        setError('请填写邮箱和密码');
+        return;
+      }
+
+      if (!client) {
+        // No Supabase configured — fall through to demo mode
+        handleDemoMode();
+        return;
+      }
+
+      setLoading(true);
+
+      try {
+        const result = isSignUp
+          ? await signUp(client, email, password, displayName || undefined)
+          : await signIn(client, email, password);
+
+        if (result.error) {
+          setError(result.error.message);
+        } else if (result.user) {
+          dispatch({
+            type: 'SET_AUTHENTICATED',
+            isAuthenticated: true,
+            userId: result.user.id,
+          });
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : '操作失败');
+      } finally {
+        setLoading(false);
+      }
+    },
+    [client, email, password, displayName, isSignUp, dispatch, handleDemoMode]
+  );
 
   return (
     <div className={styles.container}>

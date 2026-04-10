@@ -240,29 +240,26 @@ export default function CreateForm({
   const [customRrule, setCustomRrule] = useState<string | null>(null);
 
   // ── Tab switch (carry date across) ───────────────────────
-  const handleTabSwitch = useCallback(
-    (tab: ActiveTab) => {
-      if (tab === activeTab) return;
-      if (tab === 'event' && dueDate) {
-        // Carry due date/time over to start/end
-        setStartDate(dueDate);
-        setEndDate(dueDate);
-        if (dueTime) {
-          setStartTime(dueTime);
-          const h = Math.min(parseInt(dueTime.split(':')[0]) + 1, 23);
-          setEndTime(`${h.toString().padStart(2, '0')}:${dueTime.split(':')[1]}`);
-        }
-      } else if (tab === 'todo' && startDate) {
-        // Carry start date/time over to due
-        setDueDate(startDate);
-        setDueTime(startTime);
+  function handleTabSwitch(tab: ActiveTab) {
+    if (tab === activeTab) return;
+    if (tab === 'event' && dueDate) {
+      // Carry due date/time over to start/end
+      setStartDate(dueDate);
+      setEndDate(dueDate);
+      if (dueTime) {
+        setStartTime(dueTime);
+        const h = Math.min(parseInt(dueTime.split(':')[0]) + 1, 23);
+        setEndTime(`${h.toString().padStart(2, '0')}:${dueTime.split(':')[1]}`);
       }
-      setActivePicker(null);
-      setTodoPickerOpen(false);
-      setActiveTab(tab);
-    },
-    [activeTab, dueDate, dueTime, startDate, startTime],
-  );
+    } else if (tab === 'todo' && startDate) {
+      // Carry start date/time over to due
+      setDueDate(startDate);
+      setDueTime(startTime);
+    }
+    setActivePicker(null);
+    setTodoPickerOpen(false);
+    setActiveTab(tab);
+  }
 
   // ── Reminder helpers ──────────────────────────────────────
   const addReminder = useCallback(() => setReminderOffsets((p) => [...p, 10]), []);
