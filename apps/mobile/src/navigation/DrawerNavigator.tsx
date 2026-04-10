@@ -19,8 +19,10 @@
 //  └─────────────────┘
 // ============================================================
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
+  ActivityIndicator,
+  Alert,
   Pressable,
   StyleSheet,
   Text,
@@ -31,13 +33,26 @@ import {
   DrawerContentComponentProps,
   DrawerContentScrollView,
 } from '@react-navigation/drawer';
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
+import {
+  getCalendars,
+  updateCalendar,
+  type Calendar,
+} from '@project-calendar/shared';
+import { createDemoCalendarData } from '../data/demoCalendarData';
 import { useTheme } from '../hooks/useTheme';
+import { getSupabaseClientOrNull, isSupabaseConfigured } from '../lib/supabase';
 import TopBar from '../components/layout/TopBar';
 import CalendarScreen from '../screens/CalendarScreen';
 import TodoScreen from '../screens/TodoScreen';
 import type { RootStackParamList } from './AppNavigator';
+import {
+  buildDrawerCalendarItems,
+  loadDrawerCalendarsWithDeps,
+  toggleDrawerCalendarVisibilityLocally,
+  toggleDrawerCalendarVisibilityWithDeps,
+} from './drawerCalendarCore';
 
 // ---------------------------------------------------------------------------
 // View types
@@ -60,46 +75,39 @@ export type DrawerParamList = {
   TodoTab: undefined;
 };
 
-// ---------------------------------------------------------------------------
-// Mock calendar data (placeholder until Task 10 wires in real data)
-// ---------------------------------------------------------------------------
-
-interface CalendarItem {
-  id: string;
-  name: string;
-  color: string;
-  visible: boolean;
+function toErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : '加载日历失败';
 }
 
-const DEFAULT_CALENDARS: CalendarItem[] = [
-  { id: '1', name: '个人', color: '#1a73e8', visible: true },
-  { id: '2', name: '工作', color: '#34a853', visible: true },
-];
+interface CustomDrawerContentExtraProps {
+  calendars: Calendar[];
+  loadingCalendars: boolean;
+  calendarError: string | null;
+  togglingCalendarId: string | null;
+  onToggleCalendar: (id: string) => void;
+}
 
 // ---------------------------------------------------------------------------
 // Custom drawer content
 // ---------------------------------------------------------------------------
 
 function CustomDrawerContent(
-  props: DrawerContentComponentProps,
+  props: DrawerContentComponentProps & CustomDrawerContentExtraProps,
 ): React.JSX.Element {
   const { colors } = useTheme();
   const activeCalendarRoute = props.state.routes.find((route) => route.name === 'CalendarTab');
-  const routeView = (activeCalendarRoute?.params as DrawerParamList['CalendarTab'])?.initialView ?? 'month';
+  const routeView =
+    (activeCalendarRoute?.params as DrawerParamList['CalendarTab'])?.initialView ?? 'month';
   const [activeView, setActiveView] = useState<ViewType>(routeView);
-  const [calendars, setCalendars] = useState<CalendarItem[]>(DEFAULT_CALENDARS);
-  // Access root stack navigator to navigate to Settings
+  const calendarItems = useMemo(
+    () => buildDrawerCalendarItems(props.calendars),
+    [props.calendars],
+  );
   const rootNavigation = useNavigation<StackNavigationProp<RootStackParamList>>();
 
   useEffect(() => {
     setActiveView(routeView);
   }, [routeView]);
-
-  const toggleCalendar = useCallback((id: string) => {
-    setCalendars((prev) =>
-      prev.map((c) => (c.id === id ? { ...c, visible: !c.visible } : c)),
-    );
-  }, []);
 
   const handleSettings = useCallback(() => {
     props.navigation.closeDrawer();
@@ -111,89 +119,96 @@ function CustomDrawerContent(
       {...props}
       style={{ backgroundColor: colors.surface }}
     >
-      {/* ── Calendar section header ── */}
       <Text style={[styles.sectionHeader, { color: colors.text }]}>日历</Text>
 
-      {/* ── View switcher ── */}
-      <Text style={[styles.groupLabel, { color: colors.textTertiary }]}>
-        视图
-      </Text>
-      {(Object.keys(VIEW_LABELS) as ViewType[]).map((v) => (
+      <Text style={[styles.groupLabel, { color: colors.textTertiary }]}>视图</Text>
+      {(Object.keys(VIEW_LABELS) as ViewType[]).map((viewType) => (
         <Pressable
-          key={v}
+          key={viewType}
           style={({ pressed }) => [
             styles.viewItem,
-            activeView === v && { backgroundColor: colors.accentLight },
-            pressed && activeView !== v && { backgroundColor: colors.bgSecondary },
+            activeView === viewType && { backgroundColor: colors.accentLight },
+            pressed && activeView !== viewType && { backgroundColor: colors.bgSecondary },
           ]}
           onPress={() => {
-            setActiveView(v);
-            props.navigation.navigate('CalendarTab', { initialView: v });
+            setActiveView(viewType);
+            props.navigation.navigate('CalendarTab', { initialView: viewType });
             props.navigation.closeDrawer();
           }}
-          accessibilityLabel={VIEW_LABELS[v]}
+          accessibilityLabel={VIEW_LABELS[viewType]}
         >
           <View
             style={[
               styles.radio,
               {
-                borderColor: activeView === v ? colors.primary : colors.border,
+                borderColor: activeView === viewType ? colors.primary : colors.border,
               },
             ]}
           >
-            {activeView === v && (
-              <View
-                style={[styles.radioDot, { backgroundColor: colors.primary }]}
-              />
-            )}
+            {activeView === viewType ? (
+              <View style={[styles.radioDot, { backgroundColor: colors.primary }]} />
+            ) : null}
           </View>
           <Text
             style={[
               styles.viewLabel,
               {
-                color: activeView === v ? colors.primary : colors.text,
-                fontWeight: activeView === v ? '600' : '400',
+                color: activeView === viewType ? colors.primary : colors.text,
+                fontWeight: activeView === viewType ? '600' : '400',
               },
             ]}
           >
-            {VIEW_LABELS[v]}
+            {VIEW_LABELS[viewType]}
           </Text>
         </Pressable>
       ))}
 
       <View style={[styles.divider, { backgroundColor: colors.borderLight }]} />
 
-      {/* ── Calendar list ── */}
-      <Text style={[styles.groupLabel, { color: colors.textTertiary }]}>
-        我的日历
-      </Text>
-      {calendars.map((cal) => (
+      <Text style={[styles.groupLabel, { color: colors.textTertiary }]}>我的日历</Text>
+      {props.loadingCalendars ? (
+        <View style={styles.loadingRow}>
+          <ActivityIndicator size="small" color={colors.primary} />
+        </View>
+      ) : null}
+      {props.calendarError ? (
+        <Text style={[styles.calendarError, { color: colors.danger }]}>
+          {props.calendarError}
+        </Text>
+      ) : null}
+      {calendarItems.map((calendar) => (
         <Pressable
-          key={cal.id}
+          key={calendar.id}
           style={({ pressed }) => [
             styles.calendarItem,
             pressed && { backgroundColor: colors.bgSecondary },
           ]}
-          onPress={() => toggleCalendar(cal.id)}
-          accessibilityLabel={`${cal.visible ? '隐藏' : '显示'}日历 ${cal.name}`}
+          onPress={() => props.onToggleCalendar(calendar.id)}
+          accessibilityLabel={`${calendar.visible ? '隐藏' : '显示'}日历 ${calendar.name}`}
+          disabled={props.togglingCalendarId === calendar.id}
         >
           <View
             style={[
               styles.checkbox,
               {
-                backgroundColor: cal.visible ? cal.color : 'transparent',
-                borderColor: cal.color,
+                backgroundColor: calendar.visible ? calendar.color : 'transparent',
+                borderColor: calendar.color,
               },
             ]}
           >
-            {cal.visible && <Text style={styles.checkmark}>✓</Text>}
+            {calendar.visible ? <Text style={styles.checkmark}>✓</Text> : null}
           </View>
           <Text style={[styles.calendarName, { color: colors.text }]}>
-            {cal.name}
+            {calendar.name}
           </Text>
-          <View
-            style={[styles.colorDot, { backgroundColor: cal.color }]}
-          />
+          <View style={[styles.colorDot, { backgroundColor: calendar.color }]} />
+          {props.togglingCalendarId === calendar.id ? (
+            <ActivityIndicator
+              size="small"
+              color={colors.primary}
+              style={styles.calendarSpinner}
+            />
+          ) : null}
         </Pressable>
       ))}
 
@@ -213,7 +228,6 @@ function CustomDrawerContent(
 
       <View style={[styles.divider, { backgroundColor: colors.borderLight }]} />
 
-      {/* ── Settings ── */}
       <Pressable
         style={({ pressed }) => [
           styles.settingsRow,
@@ -223,17 +237,11 @@ function CustomDrawerContent(
         accessibilityLabel="设置"
       >
         <Text style={[styles.settingsIcon, { color: colors.text }]}>⚙</Text>
-        <Text style={[styles.settingsLabel, { color: colors.text }]}>
-          设置
-        </Text>
+        <Text style={[styles.settingsLabel, { color: colors.text }]}>设置</Text>
       </Pressable>
     </DrawerContentScrollView>
   );
 }
-
-// ---------------------------------------------------------------------------
-// Navigator
-// ---------------------------------------------------------------------------
 
 // ---------------------------------------------------------------------------
 // Header component with access to root navigator
@@ -270,10 +278,87 @@ const Drawer = createDrawerNavigator<DrawerParamList>();
 
 export default function DrawerNavigator(): React.JSX.Element {
   const { colors } = useTheme();
+  const [calendars, setCalendars] = useState<Calendar[] | undefined>(undefined);
+  const [loadingCalendars, setLoadingCalendars] = useState(isSupabaseConfigured);
+  const [calendarError, setCalendarError] = useState<string | null>(null);
+  const [togglingCalendarId, setTogglingCalendarId] = useState<string | null>(null);
+
+  const refreshCalendars = useCallback(async (): Promise<void> => {
+    setLoadingCalendars(true);
+    setCalendarError(null);
+    try {
+      const nextCalendars = await loadDrawerCalendarsWithDeps({
+        isSupabaseConfigured,
+        getSupabaseClientOrNull,
+        getDemoCalendars: () => createDemoCalendarData().calendars,
+        getCalendars,
+      });
+      setCalendars(nextCalendars);
+    } catch (error) {
+      setCalendarError(toErrorMessage(error));
+    } finally {
+      setLoadingCalendars(false);
+    }
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      void refreshCalendars();
+    }, [refreshCalendars]),
+  );
+
+  const handleToggleCalendar = useCallback((calendarId: string) => {
+    if (!calendars) {
+      return;
+    }
+
+    if (!isSupabaseConfigured) {
+      setCalendars((prev) =>
+        prev ? toggleDrawerCalendarVisibilityLocally(prev, calendarId) : prev,
+      );
+      return;
+    }
+
+    const client = getSupabaseClientOrNull();
+    if (!client) {
+      setCalendarError('Supabase client unavailable');
+      return;
+    }
+
+    setTogglingCalendarId(calendarId);
+    setCalendarError(null);
+
+    void (async () => {
+      try {
+        const nextCalendars = await toggleDrawerCalendarVisibilityWithDeps(
+          client,
+          calendars,
+          calendarId,
+          { updateCalendar },
+        );
+        setCalendars(nextCalendars);
+      } catch (error) {
+        const message = toErrorMessage(error);
+        setCalendarError(message);
+        Alert.alert('更新失败', message);
+      } finally {
+        setTogglingCalendarId(null);
+      }
+    })();
+  }, [calendars]);
 
   return (
     <Drawer.Navigator
-      drawerContent={(props) => <CustomDrawerContent {...props} />}
+      drawerContent={(props) => (
+        <CustomDrawerContent
+          {...props}
+          calendars={calendars ?? []}
+          loadingCalendars={loadingCalendars}
+          calendarError={calendarError}
+          togglingCalendarId={togglingCalendarId}
+          onToggleCalendar={handleToggleCalendar}
+        />
+      )}
       screenOptions={({ navigation, route }) => ({
         headerShown: true,
         header: () => (
@@ -290,7 +375,9 @@ export default function DrawerNavigator(): React.JSX.Element {
         overlayColor: 'rgba(0,0,0,0.5)',
       })}
     >
-      <Drawer.Screen name="CalendarTab" component={CalendarScreen} />
+      <Drawer.Screen name="CalendarTab">
+        {() => <CalendarScreen calendarsOverride={calendars} />}
+      </Drawer.Screen>
       <Drawer.Screen name="TodoTab" component={TodoScreen} />
     </Drawer.Navigator>
   );
@@ -378,7 +465,19 @@ const styles = StyleSheet.create({
     width: 10,
     height: 10,
     borderRadius: 5,
-    // per spec: 10x10 with radius 5
+  },
+  loadingRow: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+  },
+  calendarError: {
+    fontSize: 12,
+    paddingHorizontal: 16,
+    paddingBottom: 8,
+  },
+  calendarSpinner: {
+    marginLeft: 8,
   },
   addCalendar: {
     paddingHorizontal: 16,

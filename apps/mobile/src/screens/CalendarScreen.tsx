@@ -36,7 +36,7 @@ import MonthView from '../components/calendar/MonthView';
 import WeekView from '../components/calendar/WeekView';
 import DayView from '../components/calendar/DayView';
 import AgendaView from '../components/calendar/AgendaView';
-import { addDays, addMonths, startOfWeek } from '@project-calendar/shared';
+import { addDays, addMonths, startOfWeek, type Calendar } from '@project-calendar/shared';
 import {
   cancelAllScheduledNotifications,
   scheduleNotificationsForItems,
@@ -88,11 +88,17 @@ function navigateDate(
 type CalendarRouteProp = RouteProp<DrawerParamList, 'CalendarTab'>;
 type CalendarNavProp = DrawerNavigationProp<DrawerParamList, 'CalendarTab'>;
 
+interface CalendarScreenProps {
+  calendarsOverride?: Calendar[];
+}
+
 function buildHeaderTitle(date: Date): string {
   return `${date.getFullYear()}年${date.getMonth() + 1}月`;
 }
 
-export default function CalendarScreen(): React.JSX.Element {
+export default function CalendarScreen({
+  calendarsOverride,
+}: CalendarScreenProps): React.JSX.Element {
   const { colors } = useTheme();
   const navigation = useNavigation<CalendarNavProp>();
   const route = useRoute<CalendarRouteProp>();
@@ -110,6 +116,7 @@ export default function CalendarScreen(): React.JSX.Element {
     error: dataError,
     refresh,
   } = useAppData();
+  const effectiveCalendars = calendarsOverride ?? calendars;
 
   useEffect(() => {
     if (route.params?.initialView) {
@@ -140,7 +147,7 @@ export default function CalendarScreen(): React.JSX.Element {
     void (async () => {
       try {
         await cancelAllScheduledNotifications();
-        await scheduleNotificationsForItems(events, todos, calendars);
+        await scheduleNotificationsForItems(events, todos, effectiveCalendars);
         await syncWidgetData();
         setSyncError(null);
       } catch (err) {
@@ -152,7 +159,7 @@ export default function CalendarScreen(): React.JSX.Element {
         ]);
       }
     })();
-  }, [events, todos, calendars, loading]);
+  }, [events, todos, effectiveCalendars, loading]);
 
   // Refresh handler
   const handleRefresh = useCallback(() => {
@@ -233,7 +240,7 @@ export default function CalendarScreen(): React.JSX.Element {
             currentDate={currentDate}
             events={events}
             todos={todos}
-            calendars={calendars}
+            calendars={effectiveCalendars}
             refreshing={refreshing}
             onRefresh={handleRefresh}
             onDaySelect={handleDaySelect}
@@ -244,7 +251,7 @@ export default function CalendarScreen(): React.JSX.Element {
           <WeekView
             currentDate={currentDate}
             events={events}
-            calendars={calendars}
+            calendars={effectiveCalendars}
             refreshing={refreshing}
             onRefresh={handleRefresh}
             onDayPress={handleDaySelect}
@@ -255,7 +262,7 @@ export default function CalendarScreen(): React.JSX.Element {
           <DayView
             currentDate={currentDate}
             events={events}
-            calendars={calendars}
+            calendars={effectiveCalendars}
             refreshing={refreshing}
             onRefresh={handleRefresh}
           />
@@ -266,7 +273,7 @@ export default function CalendarScreen(): React.JSX.Element {
             currentDate={currentDate}
             events={events}
             todos={todos}
-            calendars={calendars}
+            calendars={effectiveCalendars}
             refreshing={refreshing}
             onRefresh={handleRefresh}
           />
@@ -277,7 +284,7 @@ export default function CalendarScreen(): React.JSX.Element {
     currentDate,
     events,
     todos,
-    calendars,
+    effectiveCalendars,
     refreshing,
     handleRefresh,
     handleDaySelect,
@@ -285,7 +292,7 @@ export default function CalendarScreen(): React.JSX.Element {
 
   const screenError = dataError ?? syncError;
 
-  if (loading && events.length === 0 && todos.length === 0 && calendars.length === 0) {
+  if (loading && events.length === 0 && todos.length === 0 && effectiveCalendars.length === 0) {
     return (
       <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
         <ActivityIndicator color={colors.primary} />
