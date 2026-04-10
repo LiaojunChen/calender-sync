@@ -31,6 +31,7 @@ import type { CalendarRow, EventInsert, EventUpdate } from '@project-calendar/sh
 import { getSupabaseClientOrNull, SUPABASE_CONFIG_ERROR } from '../lib/supabase';
 import { DEFAULT_REMINDER_OFFSETS } from '../notifications/scheduler';
 import { syncWidgetData } from '../widget/widgetSync';
+import { buildEventInsertPayload } from '../lib/formPayloads';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -265,17 +266,27 @@ export default function EventFormScreen(): React.JSX.Element {
           return;
         }
       } else {
-        const insert: EventInsert = {
-          title: title.trim(),
-          description: description.trim() || undefined,
-          location: location.trim() || undefined,
-          start_time: startIso,
-          end_time: endIso,
-          is_all_day: isAllDay,
-          calendar_id: calendarId,
-          color: color ?? undefined,
-          user_id: '', // filled by RLS / trigger
-        };
+        const userResult = await supabase.auth.getUser();
+        const userId = userResult.data.user?.id;
+        if (!userId) {
+          Alert.alert('保存失败', '当前登录状态无效，请重新登录后再试');
+          setSaving(false);
+          return;
+        }
+
+        const insert: EventInsert = buildEventInsertPayload(
+          {
+            title,
+            description,
+            location,
+            start_time: startIso,
+            end_time: endIso,
+            is_all_day: isAllDay,
+            calendar_id: calendarId,
+            color,
+          },
+          userId,
+        );
         const result = await createEvent(supabase, insert);
         if (result.error || !result.data) {
           Alert.alert('保存失败', result.error ?? '未知错误');

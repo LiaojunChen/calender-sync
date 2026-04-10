@@ -30,6 +30,7 @@ import type { CalendarRow, TodoInsert, TodoUpdate } from '@project-calendar/shar
 import { getSupabaseClientOrNull, SUPABASE_CONFIG_ERROR } from '../lib/supabase';
 import { DEFAULT_REMINDER_OFFSETS } from '../notifications/scheduler';
 import { syncWidgetData } from '../widget/widgetSync';
+import { buildTodoInsertPayload } from '../lib/formPayloads';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -167,15 +168,25 @@ export default function TodoFormScreen(): React.JSX.Element {
           return;
         }
       } else {
-        const insert: TodoInsert = {
-          title: title.trim(),
-          description: description.trim() || undefined,
-          due_date: dueDate.trim() || undefined,
-          due_time: dueTime.trim() || undefined,
-          calendar_id: calendarId,
-          user_id: '', // filled by RLS / trigger
-          is_completed: false,
-        };
+        const userResult = await supabase.auth.getUser();
+        const userId = userResult.data.user?.id;
+        if (!userId) {
+          Alert.alert('保存失败', '当前登录状态无效，请重新登录后再试');
+          setSaving(false);
+          return;
+        }
+
+        const insert: TodoInsert = buildTodoInsertPayload(
+          {
+            title,
+            description,
+            due_date: dueDate,
+            due_time: dueTime,
+            calendar_id: calendarId,
+            is_completed: false,
+          },
+          userId,
+        );
         const result = await createTodo(supabase, insert);
         if (result.error || !result.data) {
           Alert.alert('保存失败', result.error ?? '未知错误');
