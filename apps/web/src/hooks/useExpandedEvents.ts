@@ -21,6 +21,7 @@ export interface EventWithRrule extends Event {
  * Exception record stored locally for demo mode.
  */
 export interface LocalException {
+  id?: string;
   event_id: string;
   original_date: string;
   action: 'skip' | 'modify';

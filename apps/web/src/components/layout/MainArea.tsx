@@ -8,6 +8,9 @@ import {
   updateEvent as apiUpdateEvent,
   softDeleteEvent as apiSoftDeleteEvent,
   getEvents as apiGetEvents,
+  getEventExceptions as apiGetEventExceptions,
+  createEventException as apiCreateEventException,
+  updateEventException as apiUpdateEventException,
   setRemindersForEvent,
   createTodo as apiCreateTodo,
   updateTodo as apiUpdateTodo,
@@ -16,8 +19,10 @@ import {
   getTodos as apiGetTodos,
   setRemindersForTodo,
   createRecurrenceRule as apiCreateRecurrenceRule,
+  getRecurrenceRule as apiGetRecurrenceRule,
+  updateRecurrenceRule as apiUpdateRecurrenceRule,
 } from '@project-calendar/shared';
-import type { Event, Calendar, Todo } from '@project-calendar/shared';
+import type { Event, Calendar, Todo, EventExceptionRow } from '@project-calendar/shared';
 import { addDays, startOfMonth, endOfMonth, addMonths, startOfWeek, endOfWeek } from '@project-calendar/shared';
 import { useUndo } from '@/hooks/useUndo';
 import { useRealtimeSync } from '@/hooks/useRealtimeSync';
@@ -62,6 +67,32 @@ function nextDemoTodoId(): string {
 
 function buildDateTimeISO(dateStr: string, timeStr: string): string {
   return new Date(`${dateStr}T${timeStr}:00`).toISOString();
+}
+
+function mapExceptionRowToLocalException(row: EventExceptionRow): LocalException {
+  return {
+    id: row.id,
+    event_id: row.event_id,
+    original_date: row.original_date,
+    action: row.action,
+    modified_title: row.modified_title,
+    modified_start_time: row.modified_start_time,
+    modified_end_time: row.modified_end_time,
+  };
+}
+
+function upsertLocalExceptionList(
+  exceptions: LocalException[],
+  nextException: LocalException,
+): LocalException[] {
+  const filtered = exceptions.filter(
+    (existing) =>
+      !(
+        existing.event_id === nextException.event_id &&
+        existing.original_date === nextException.original_date
+      ),
+  );
+  return [...filtered, nextException];
 }
 
 /** Get the expanded range for the current view (+ 1-month buffer) */
@@ -120,6 +151,8 @@ export default function MainArea() {
   const calendars = state.calendars.length > 0 ? state.calendars : DEMO_CALENDARS;
   // isDemoMode: true when using local demo calendars (no real Supabase account)
   const isDemoMode = state.userId === 'demo-user' || state.calendars.length === 0;
+  // Expanded-instance exceptions used by both demo mode and persisted DB-backed rules.
+  const [localExceptions, setLocalExceptions] = useState<LocalException[]>([]);
 
   // Events: use context state, initialize with demo events in demo mode
   useEffect(() => {
@@ -146,7 +179,41 @@ export default function MainArea() {
     (async () => {
       const result = await apiGetEvents(client);
       if (result.data) {
-        dispatch({ type: 'SET_EVENTS', events: result.data as unknown as Event[] });
+        const fetchedEvents = result.data as unknown as EventWithRrule[];
+        const recurringEvents = fetchedEvents.filter((event) => event.recurrence_rule_id);
+
+        const [ruleEntries, exceptionEntries] = await Promise.all([
+          Promise.all(
+            recurringEvents.map(async (event) => {
+              if (!event.recurrence_rule_id) return null;
+              const ruleResult = await apiGetRecurrenceRule(client, event.recurrence_rule_id);
+              if (!ruleResult.data?.rrule_string) return null;
+              return [event.id, ruleResult.data.rrule_string] as const;
+            }),
+          ),
+          Promise.all(
+            recurringEvents.map(async (event) => {
+              const exceptionResult = await apiGetEventExceptions(client, event.id);
+              return exceptionResult.data ?? [];
+            }),
+          ),
+        ]);
+
+        const ruleMap = new Map(
+          ruleEntries.filter((entry): entry is readonly [string, string] => entry !== null),
+        );
+
+        const enrichedEvents = fetchedEvents.map((event) => {
+          const rruleString = ruleMap.get(event.id);
+          return rruleString
+            ? ({ ...event, rrule_string: rruleString } as EventWithRrule)
+            : event;
+        });
+
+        dispatch({ type: 'SET_EVENTS', events: enrichedEvents as unknown as Event[] });
+        setLocalExceptions(
+          exceptionEntries.flat().map((row) => mapExceptionRowToLocalException(row)),
+        );
       }
     })();
   }, [isDemoMode, state.isAuthenticated, dispatch]);
@@ -168,9 +235,6 @@ export default function MainArea() {
   const rawEvents = state.events as EventWithRrule[];
   const todos = state.todos;
 
-  // Local exceptions state (for demo mode; in real mode they'd come from DB)
-  const [localExceptions, setLocalExceptions] = useState<LocalException[]>([]);
-
   // Compute view range with buffer
   const { start: rangeStart, end: rangeEnd } = useMemo(
     () => getViewRange(state.currentView, state.currentDate),
@@ -186,6 +250,53 @@ export default function MainArea() {
     for (const c of calendars) map.set(c.id, c);
     return map;
   }, [calendars]);
+
+  const persistException = useCallback(
+    async (exception: LocalException): Promise<boolean> => {
+      if (isDemoMode) {
+        setLocalExceptions((prev) => upsertLocalExceptionList(prev, exception));
+        return true;
+      }
+
+      const client = getSupabaseClient();
+      if (!client || !state.userId) {
+        return false;
+      }
+
+      const existing = localExceptions.find(
+        (current) =>
+          current.event_id === exception.event_id &&
+          current.original_date === exception.original_date,
+      );
+
+      const payload = {
+        event_id: exception.event_id,
+        original_date: exception.original_date,
+        action: exception.action,
+        modified_title: exception.modified_title ?? null,
+        modified_start_time: exception.modified_start_time ?? null,
+        modified_end_time: exception.modified_end_time ?? null,
+      };
+
+      const result = existing?.id
+        ? await apiUpdateEventException(client, existing.id, payload)
+        : await apiCreateEventException(client, {
+            user_id: state.userId,
+            ...payload,
+          });
+
+      const savedException = result.data;
+      if (!savedException) {
+        return false;
+      }
+
+      setLocalExceptions((prev) =>
+        upsertLocalExceptionList(prev, mapExceptionRowToLocalException(savedException)),
+      );
+      return true;
+    },
+    [isDemoMode, localExceptions, state.userId],
+  );
 
   // -----------------------------------------------------------
   // Event form state
@@ -420,18 +531,17 @@ export default function MainArea() {
 
       if (action === 'this') {
         // Add a skip exception for this instance
-        const newEx: LocalException = {
+        void persistException({
           event_id: parentId,
           original_date: inst._instanceDate,
           action: 'skip',
-        };
-        setLocalExceptions((prev) => [...prev, newEx]);
+        });
       } else if (action === 'all' || action === 'this_and_future') {
         // Delete the parent event (removes all instances)
         doDeleteEvent(parentEvent, parentId);
       }
     },
-    [pendingRecurringEvent, rawEvents, doDeleteEvent],
+    [pendingRecurringEvent, rawEvents, doDeleteEvent, persistException],
   );
 
   // -----------------------------------------------------------
@@ -457,25 +567,17 @@ export default function MainArea() {
           ? new Date(`${data.endDate}T23:59:59`).toISOString()
           : buildDateTimeISO(data.endDate, data.endTime);
 
-        const newEx: LocalException = {
+        const saved = await persistException({
           event_id: expandedEvent._recurringEventId!,
           original_date: expandedEvent._instanceDate!,
           action: 'modify',
           modified_title: data.title,
           modified_start_time: startISO,
           modified_end_time: endISO,
-        };
-        setLocalExceptions((prev) => {
-          // Replace existing exception for same date if any
-          const filtered = prev.filter(
-            (e) =>
-              !(
-                e.event_id === newEx.event_id &&
-                e.original_date === newEx.original_date
-              ),
-          );
-          return [...filtered, newEx];
         });
+        if (!saved) {
+          return;
+        }
         setFormOpen(false);
         setEditingEvent(null);
         return;
@@ -484,6 +586,7 @@ export default function MainArea() {
       if (eventId && !isInstanceEdit) {
         // Update existing event (find the real event, not an instance)
         const realEventId = expandedEvent?._recurringEventId ?? eventId;
+        const existingEvent = rawEvents.find((event) => event.id === realEventId);
 
         const startISO = data.isAllDay
           ? new Date(`${data.startDate}T00:00:00`).toISOString()
@@ -506,23 +609,28 @@ export default function MainArea() {
         };
 
         if (isDemoMode) {
-          const existing = rawEvents.find((e) => e.id === realEventId);
-          if (existing) {
-            dispatch({ type: 'UPDATE_EVENT', event: { ...existing, ...localUpdates } as Event });
+          if (existingEvent) {
+            dispatch({ type: 'UPDATE_EVENT', event: { ...existingEvent, ...localUpdates } as Event });
           }
         } else {
           const client = getSupabaseClient();
           if (client) {
             // Handle recurrence rule creation/update
-            let recurrenceRuleId: string | null = null;
+            let recurrenceRuleId: string | null = existingEvent?.recurrence_rule_id ?? null;
             if (data.rruleString) {
-              const ruleResult = await apiCreateRecurrenceRule(client, {
-                user_id: state.userId!,
-                rrule_string: data.rruleString,
-              });
+              const ruleResult = recurrenceRuleId
+                ? await apiUpdateRecurrenceRule(client, recurrenceRuleId, {
+                    rrule_string: data.rruleString,
+                  })
+                : await apiCreateRecurrenceRule(client, {
+                    user_id: state.userId!,
+                    rrule_string: data.rruleString,
+                  });
               if (ruleResult.data) {
                 recurrenceRuleId = ruleResult.data.id;
               }
+            } else {
+              recurrenceRuleId = null;
             }
 
             const apiUpdates = {
@@ -539,7 +647,13 @@ export default function MainArea() {
             };
             const result = await apiUpdateEvent(client, realEventId, apiUpdates);
             if (result.data) {
-              dispatch({ type: 'UPDATE_EVENT', event: result.data as unknown as Event });
+              dispatch({
+                type: 'UPDATE_EVENT',
+                event: {
+                  ...result.data,
+                  rrule_string: data.rruleString ?? null,
+                } as unknown as Event,
+              });
               await setRemindersForEvent(client, realEventId, data.reminderOffsets);
             }
           }
@@ -600,7 +714,13 @@ export default function MainArea() {
               recurrence_rule_id: recurrenceRuleId,
             });
             if (result.data) {
-              dispatch({ type: 'ADD_EVENT', event: result.data as unknown as Event });
+              dispatch({
+                type: 'ADD_EVENT',
+                event: {
+                  ...result.data,
+                  rrule_string: data.rruleString ?? null,
+                } as unknown as Event,
+              });
               await setRemindersForEvent(client, result.data.id, data.reminderOffsets);
             }
           }
@@ -610,7 +730,7 @@ export default function MainArea() {
       setFormOpen(false);
       setEditingEvent(null);
     },
-    [isDemoMode, events, rawEvents, state.userId, dispatch],
+    [isDemoMode, events, rawEvents, state.userId, dispatch, persistException],
   );
 
   // -----------------------------------------------------------
