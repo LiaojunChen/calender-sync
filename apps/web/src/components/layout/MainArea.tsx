@@ -215,6 +215,21 @@ export default function MainArea() {
   const [editingTodo, setEditingTodo] = useState<Todo | null>(null);
 
   // -----------------------------------------------------------
+  // Respond to pending create form request (from Sidebar "+" or MonthView date click)
+  // -----------------------------------------------------------
+  useEffect(() => {
+    if (!state.pendingCreateDate) return;
+    const date = state.pendingCreateDate;
+    const startDate = new Date(date);
+    // Default to 1-hour duration
+    const endDate = new Date(startDate.getTime() + 60 * 60 * 1000);
+    setEditingEvent(null);
+    setFormDefaults({ start: startDate, end: endDate });
+    setFormOpen(true);
+    dispatch({ type: 'CLEAR_CREATE_FORM_REQUEST' });
+  }, [state.pendingCreateDate, dispatch]);
+
+  // -----------------------------------------------------------
   // Handlers: create event from time grid
   // -----------------------------------------------------------
   const handleCreateEvent = useCallback(

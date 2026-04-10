@@ -4,7 +4,6 @@ import React, { useMemo, useCallback } from 'react';
 import type { Event, Calendar, Todo } from '@project-calendar/shared';
 import {
   startOfMonth,
-  endOfMonth,
   startOfWeek,
   addDays,
   isSameDay,
@@ -14,6 +13,7 @@ import {
   formatTime,
 } from '@project-calendar/shared';
 import { useAppContext } from '@/contexts/AppContext';
+import { getLunarDateDisplay } from '@/lib/lunarCalendar';
 import styles from './MonthView.module.css';
 
 const DAY_NAMES = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
@@ -80,7 +80,7 @@ function getSpan(
 // ----------------------------------------------------------------
 
 export default function MonthView({ currentDate, events, calendars, todos = [] }: MonthViewProps) {
-  const { setView, setDate } = useAppContext();
+  const { dispatch } = useAppContext();
 
   const calendarMap = useMemo(() => {
     const map = new Map<string, Calendar>();
@@ -160,13 +160,15 @@ export default function MonthView({ currentDate, events, calendars, todos = [] }
     return { multiDayEvents: multi, singleDayEvents: single };
   }, [filteredEvents]);
 
-  // Click handler for date cell
+  // Click handler for date cell — open create-event form for that date
   const handleDateClick = useCallback(
     (date: Date) => {
-      setDate(date);
-      setView('day');
+      // Use 9:00 AM as default start time for the create form
+      const createDate = new Date(date);
+      createDate.setHours(9, 0, 0, 0);
+      dispatch({ type: 'REQUEST_CREATE_FORM', date: createDate });
     },
-    [setDate, setView],
+    [dispatch],
   );
 
   // Memoize the rendered grid rows to avoid re-computing bar layout and
@@ -307,6 +309,8 @@ export default function MonthView({ currentDate, events, calendars, todos = [] }
         !isCurrentMonth ? styles.dateNumberOtherMonth : '',
       ].filter(Boolean).join(' ');
 
+      const lunarDisplay = getLunarDateDisplay(date);
+
       return (
         <div
           key={`${weekIdx}-${colIdx}`}
@@ -317,6 +321,9 @@ export default function MonthView({ currentDate, events, calendars, todos = [] }
             <span className={dateNumberClasses}>
               {date.getDate()}
             </span>
+            {lunarDisplay && (
+              <span className={styles.lunarDate}>{lunarDisplay}</span>
+            )}
           </div>
           <div className={styles.eventsArea}>
             {multiDaySlots}

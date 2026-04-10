@@ -54,6 +54,11 @@ export interface AppState {
   userSettings: UserSettings | null;
   /** Search query string */
   searchQuery: string;
+  /**
+   * When set, MainArea opens the create-event form for this date.
+   * Cleared after the form is opened.
+   */
+  pendingCreateDate: Date | null;
 }
 
 export type AppAction =
@@ -81,7 +86,9 @@ export type AppAction =
   | { type: 'SET_AUTHENTICATED'; isAuthenticated: boolean; userId: string | null }
   | { type: 'SET_LOADING'; isLoading: boolean }
   | { type: 'SET_USER_SETTINGS'; userSettings: UserSettings | null }
-  | { type: 'SET_SEARCH_QUERY'; query: string };
+  | { type: 'SET_SEARCH_QUERY'; query: string }
+  | { type: 'REQUEST_CREATE_FORM'; date?: Date }
+  | { type: 'CLEAR_CREATE_FORM_REQUEST' };
 
 export interface AppContextValue {
   state: AppState;
@@ -116,6 +123,7 @@ const initialState: AppState = {
   userId: null,
   userSettings: null,
   searchQuery: '',
+  pendingCreateDate: null,
 };
 
 // ============================================================
@@ -219,6 +227,10 @@ function appReducer(state: AppState, action: AppAction): AppState {
       return { ...state, userSettings: action.userSettings };
     case 'SET_SEARCH_QUERY':
       return { ...state, searchQuery: action.query };
+    case 'REQUEST_CREATE_FORM':
+      return { ...state, pendingCreateDate: action.date ?? new Date() };
+    case 'CLEAR_CREATE_FORM_REQUEST':
+      return { ...state, pendingCreateDate: null };
     default:
       return state;
   }

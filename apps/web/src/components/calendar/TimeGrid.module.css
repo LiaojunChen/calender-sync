@@ -150,6 +150,7 @@
   height: 10px;
   border-radius: 50%;
   background-color: #DC2626;
+  pointer-events: none;
 }
 
 /* Ghost block for drag-to-create */

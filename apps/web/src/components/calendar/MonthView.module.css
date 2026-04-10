@@ -59,6 +59,7 @@
 /* Date number header inside cell */
 .dateHeader {
   display: flex;
+  flex-direction: column;
   justify-content: center;
   align-items: center;
   padding: 2px 0 4px;
@@ -85,6 +86,16 @@
 
 .dateNumberOtherMonth {
   color: var(--text-tertiary);
+}
+
+.lunarDate {
+  font-size: 9px;
+  color: var(--text-tertiary);
+  line-height: 1;
+  margin-top: 1px;
+  letter-spacing: 0;
+  font-weight: 400;
+  white-space: nowrap;
 }
 
 /* Events area inside cell */

@@ -16,7 +16,11 @@ export default function Sidebar() {
   return (
     <aside className={sidebarClass}>
       {/* Create button */}
-      <button className={styles.createButton} title="创建">
+      <button
+        className={styles.createButton}
+        title="创建"
+        onClick={() => dispatch({ type: 'REQUEST_CREATE_FORM' })}
+      >
         <span className={styles.createButtonIcon}>
           <svg width="36" height="36" viewBox="0 0 36 36">
             <path fill="#34A853" d="M16 16v14h4V20z" />
