@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import type { UserSettings } from '@project-calendar/shared';
 import { updateUserSettings } from '@project-calendar/shared';
 import { useAppContext, type ViewType, type ThemeMode, DEFAULT_USER_SETTINGS } from '@/contexts/AppContext';
@@ -91,17 +91,6 @@ export default function SettingsPanel({ onClose }: SettingsPanelProps) {
   const [newReminderValue, setNewReminderValue] = useState<number>(10);
   const [saving, setSaving] = useState(false);
   const [savedMessage, setSavedMessage] = useState('');
-
-  // Sync from context if it loads later
-  useEffect(() => {
-    if (currentSettings) {
-      setDefaultView(currentSettings.default_view as ViewType);
-      setWeekStartDay(currentSettings.week_start_day);
-      setDefaultEventDuration(currentSettings.default_event_duration);
-      setLocalTheme(currentSettings.theme);
-      setReminderOffsets(currentSettings.default_reminder_offsets);
-    }
-  }, [currentSettings]);
 
   const handleAddReminder = useCallback(() => {
     if (!reminderOffsets.includes(newReminderValue)) {

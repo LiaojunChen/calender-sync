@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import ScrollPickerColumn from './ScrollPickerColumn';
 import styles from './DateTimePicker.module.css';
 
@@ -61,11 +61,6 @@ export default function DateTimePicker({
     label: `${i + 1}日`,
     value: i + 1,
   }));
-
-  // Clamp day to valid range
-  useEffect(() => {
-    if (day > maxDay) setDay(maxDay);
-  }, [day, maxDay]);
 
   const handleConfirm = useCallback(() => {
     const clampedDay = Math.min(day, maxDay);

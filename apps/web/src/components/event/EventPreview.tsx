@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useCallback, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useCallback, useMemo, useRef } from 'react';
 import type { Event, Calendar } from '@project-calendar/shared';
 import { formatTimeRange } from '@project-calendar/shared';
 import styles from './EventPreview.module.css';
@@ -17,6 +17,34 @@ interface EventPreviewProps {
   onClose: () => void;
 }
 
+function getPopoverPosition(anchorRect: DOMRect, popoverHeight: number): { top: number; left: number } {
+  if (typeof window === 'undefined') {
+    return { top: 16, left: 16 };
+  }
+
+  const popW = 300;
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+
+  let left = anchorRect.right + 8;
+  let top = anchorRect.top;
+
+  if (left + popW > vw - 16) {
+    left = anchorRect.left - popW - 8;
+  }
+  if (left < 16) {
+    left = Math.max(16, anchorRect.left);
+  }
+  if (top + popoverHeight > vh - 16) {
+    top = vh - popoverHeight - 16;
+  }
+  if (top < 16) {
+    top = 16;
+  }
+
+  return { top, left };
+}
+
 export default function EventPreview({
   event,
   calendar,
@@ -27,34 +55,18 @@ export default function EventPreview({
   onClose,
 }: EventPreviewProps) {
   const popoverRef = useRef<HTMLDivElement>(null);
-  const [position, setPosition] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
+  const fallbackPosition = useMemo(
+    () => getPopoverPosition(anchorRect, 240),
+    [anchorRect],
+  );
 
-  // Position the popover near the anchor
-  useEffect(() => {
-    if (!popoverRef.current) return;
-    const popW = 300;
-    const popH = popoverRef.current.offsetHeight || 240;
-    const vw = window.innerWidth;
-    const vh = window.innerHeight;
+  useLayoutEffect(() => {
+    const popover = popoverRef.current;
+    if (!popover) return;
 
-    let left = anchorRect.right + 8;
-    let top = anchorRect.top;
-
-    // If it overflows right, put it to the left of the anchor
-    if (left + popW > vw - 16) {
-      left = anchorRect.left - popW - 8;
-    }
-    // If it overflows left, fallback to center below
-    if (left < 16) {
-      left = Math.max(16, anchorRect.left);
-    }
-    // If it overflows bottom
-    if (top + popH > vh - 16) {
-      top = vh - popH - 16;
-    }
-    if (top < 16) top = 16;
-
-    setPosition({ top, left });
+    const { top, left } = getPopoverPosition(anchorRect, popover.offsetHeight || 240);
+    popover.style.top = `${top}px`;
+    popover.style.left = `${left}px`;
   }, [anchorRect]);
 
   // Close on Escape
@@ -87,7 +99,7 @@ export default function EventPreview({
       <div
         className={styles.popover}
         ref={popoverRef}
-        style={{ top: `${position.top}px`, left: `${position.left}px` }}
+        style={{ top: `${fallbackPosition.top}px`, left: `${fallbackPosition.left}px` }}
       >
         <div className={styles.header}>
           <div className={styles.colorStrip} style={{ backgroundColor: color }} />

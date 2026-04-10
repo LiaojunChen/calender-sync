@@ -219,18 +219,8 @@ export default function MainArea() {
   // -----------------------------------------------------------
   // Unified create form state (replaces the old choice dialog)
   // -----------------------------------------------------------
-  const [createFormOpen, setCreateFormOpen] = useState(false);
-  const [createFormDate, setCreateFormDate] = useState<Date | null>(null);
-
-  // -----------------------------------------------------------
-  // Respond to pending create form request (from Sidebar "+" or MonthView date click)
-  // -----------------------------------------------------------
-  useEffect(() => {
-    if (!state.pendingCreateDate) return;
-    setCreateFormDate(state.pendingCreateDate);
-    setCreateFormOpen(true);
-    dispatch({ type: 'CLEAR_CREATE_FORM_REQUEST' });
-  }, [state.pendingCreateDate, dispatch]);
+  const createFormDate = state.pendingCreateDate;
+  const createFormOpen = createFormDate !== null;
 
   // -----------------------------------------------------------
   // Global keyboard shortcuts
@@ -1025,18 +1015,15 @@ export default function MainArea() {
           defaultTab="todo"
           calendars={calendars}
           onSaveEvent={(data) => {
-            setCreateFormOpen(false);
-            setCreateFormDate(null);
-            handleSaveEvent(data);
+            dispatch({ type: 'CLEAR_CREATE_FORM_REQUEST' });
+            void handleSaveEvent(data);
           }}
           onSaveTodo={(data) => {
-            setCreateFormOpen(false);
-            setCreateFormDate(null);
-            handleSaveTodo(data);
+            dispatch({ type: 'CLEAR_CREATE_FORM_REQUEST' });
+            void handleSaveTodo(data);
           }}
           onClose={() => {
-            setCreateFormOpen(false);
-            setCreateFormDate(null);
+            dispatch({ type: 'CLEAR_CREATE_FORM_REQUEST' });
           }}
         />
       )}

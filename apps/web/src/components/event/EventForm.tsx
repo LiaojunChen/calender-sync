@@ -60,6 +60,15 @@ const WEEKDAY_LABELS = ['一', '二', '三', '四', '五', '六', '日'];
 
 type CustomEndType = 'forever' | 'count' | 'until';
 
+interface ParsedCustomRecurrenceState {
+  freq: RecurrenceFrequency;
+  interval: number;
+  byweekday: number[];
+  endType: CustomEndType;
+  count: number;
+  until: string;
+}
+
 // ============================================================
 // Types
 // ============================================================
@@ -133,6 +142,64 @@ function detectPreset(rrule: string | null): string {
   return 'custom';
 }
 
+function parseCustomRecurrenceInitial(initial?: string | null): ParsedCustomRecurrenceState {
+  const parsed: ParsedCustomRecurrenceState = {
+    freq: 'weekly',
+    interval: 1,
+    byweekday: [],
+    endType: 'forever',
+    count: 10,
+    until: '',
+  };
+
+  if (!initial) {
+    return parsed;
+  }
+
+  const upper = initial.toUpperCase();
+
+  if (upper.includes('FREQ=MONTHLY')) parsed.freq = 'monthly';
+  else if (upper.includes('FREQ=YEARLY')) parsed.freq = 'yearly';
+  else if (upper.includes('FREQ=DAILY')) parsed.freq = 'daily';
+
+  const intervalMatch = upper.match(/INTERVAL=(\d+)/);
+  if (intervalMatch) {
+    parsed.interval = Math.max(1, parseInt(intervalMatch[1], 10));
+  }
+
+  const bydayMatch = upper.match(/BYDAY=([A-Z,]+)/);
+  if (bydayMatch) {
+    const weekdayMap: Record<string, number> = {
+      MO: 0,
+      TU: 1,
+      WE: 2,
+      TH: 3,
+      FR: 4,
+      SA: 5,
+      SU: 6,
+    };
+    parsed.freq = 'weekly';
+    parsed.byweekday = bydayMatch[1]
+      .split(',')
+      .map((token) => weekdayMap[token])
+      .filter((day): day is number => day !== undefined);
+  }
+
+  const countMatch = upper.match(/COUNT=(\d+)/);
+  if (countMatch) {
+    parsed.endType = 'count';
+    parsed.count = Math.max(1, parseInt(countMatch[1], 10));
+  }
+
+  const untilMatch = upper.match(/UNTIL=(\d{4})(\d{2})(\d{2})/);
+  if (untilMatch) {
+    parsed.endType = 'until';
+    parsed.until = `${untilMatch[1]}-${untilMatch[2]}-${untilMatch[3]}`;
+  }
+
+  return parsed;
+}
+
 // ============================================================
 // Sub-component: Custom Recurrence Form
 // ============================================================
@@ -143,36 +210,13 @@ interface CustomFormProps {
 }
 
 function CustomRecurrenceForm({ onChange, initial }: CustomFormProps) {
-  const [freq, setFreq] = useState<RecurrenceFrequency>('weekly');
-  const [interval, setInterval] = useState(1);
-  const [byweekday, setByweekday] = useState<number[]>([]);
-  const [endType, setEndType] = useState<CustomEndType>('forever');
-  const [count, setCount] = useState(10);
-  const [until, setUntil] = useState('');
-
-  // Parse initial rrule string if provided
-  useEffect(() => {
-    if (!initial) return;
-    // Simple parse for preset re-entry — full parse not needed
-    const upper = initial.toUpperCase();
-    if (upper.includes('FREQ=WEEKLY')) setFreq('weekly');
-    else if (upper.includes('FREQ=MONTHLY')) setFreq('monthly');
-    else if (upper.includes('FREQ=YEARLY')) setFreq('yearly');
-    else setFreq('daily');
-
-    const intMatch = upper.match(/INTERVAL=(\d+)/);
-    if (intMatch) setInterval(parseInt(intMatch[1], 10));
-
-    if (upper.includes('COUNT=')) {
-      const m = upper.match(/COUNT=(\d+)/);
-      if (m) {
-        setCount(parseInt(m[1], 10));
-        setEndType('count');
-      }
-    } else if (upper.includes('UNTIL=')) {
-      setEndType('until');
-    }
-  }, [initial]);
+  const initialState = parseCustomRecurrenceInitial(initial);
+  const [freq, setFreq] = useState<RecurrenceFrequency>(initialState.freq);
+  const [interval, setInterval] = useState(initialState.interval);
+  const [byweekday, setByweekday] = useState<number[]>(initialState.byweekday);
+  const [endType, setEndType] = useState<CustomEndType>(initialState.endType);
+  const [count, setCount] = useState(initialState.count);
+  const [until, setUntil] = useState(initialState.until);
 
   // Build and emit rrule whenever options change
   useEffect(() => {
@@ -299,8 +343,10 @@ export default function EventForm({
   onSave,
   onClose,
 }: EventFormProps) {
-  const isEdit = !!event;
   const dialogRef = useRef<HTMLDivElement>(null);
+  const initialRruleString =
+    (event as (Event & { rrule_string?: string | null }) | null)?.rrule_string ?? null;
+  const initialRecurrencePreset = detectPreset(initialRruleString);
 
   // Derive initial values
   const initStart = event ? new Date(event.start_time) : (defaultStart ?? new Date());
@@ -330,16 +376,11 @@ export default function EventForm({
   // Recurrence state
   // We store the current rrule string (null = no recurrence)
   // and separately track which preset is selected
-  const [rruleString, setRruleString] = useState<string | null>(null);
-  const [recurrencePreset, setRecurrencePreset] = useState<string>('none');
-  const [customRrule, setCustomRrule] = useState<string | null>(null);
-
-  // If editing an event with existing recurrence, detect the preset
-  useEffect(() => {
-    // In a real implementation we'd load the rrule from the event's recurrence_rule_id.
-    // For demo mode events that already have rrule strings embedded, we skip.
-    // The form starts with no recurrence selected.
-  }, []);
+  const [rruleString, setRruleString] = useState<string | null>(initialRruleString);
+  const [recurrencePreset, setRecurrencePreset] = useState<string>(initialRecurrencePreset);
+  const [customRrule, setCustomRrule] = useState<string | null>(
+    initialRecurrencePreset === 'custom' ? initialRruleString : null,
+  );
 
   // Handle preset change
   const handlePresetChange = useCallback((preset: string) => {
@@ -631,8 +672,9 @@ export default function EventForm({
           {/* Custom sub-form */}
           {recurrencePreset === 'custom' && (
             <CustomRecurrenceForm
+              key={customRrule ?? initialRruleString ?? 'custom'}
               onChange={handleCustomChange}
-              initial={null}
+              initial={customRrule}
             />
           )}
         </div>
