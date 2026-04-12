@@ -27,7 +27,11 @@
         <data android:scheme="projectcalendar"/>
       </intent-filter>
     </activity>
-    <service android:name=".widget.CalendarWidgetService" android:permission="android.permission.BIND_REMOTEVIEWS" android:exported="false"/>
+    <service android:name=".widget.CalendarWidgetService" android:permission="android.permission.BIND_REMOTEVIEWS" android:exported="true">
+      <intent-filter>
+        <action android:name="android.widget.RemoteViewsService"/>
+      </intent-filter>
+    </service>
     <receiver android:name=".widget.CalendarWidgetProvider" android:exported="true">
       <intent-filter>
         <action android:name="android.appwidget.action.APPWIDGET_UPDATE"/>
