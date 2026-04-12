@@ -3,10 +3,13 @@
 // ============================================================
 
 import React, { useMemo } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import type { StackNavigationProp } from '@react-navigation/stack';
 import { useTheme } from '../../hooks/useTheme';
 import { isSameDay, formatTime } from '@project-calendar/shared';
 import type { Event, Calendar } from '@project-calendar/shared';
+import type { RootStackParamList } from '../../navigation/AppNavigator';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -63,6 +66,7 @@ export default function TimeGrid({
   now,
 }: TimeGridProps): React.JSX.Element {
   const { colors } = useTheme();
+  const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
   const columnCount = days.length;
 
   // Group events by day index
@@ -80,6 +84,11 @@ export default function TimeGrid({
   const nowMinutes = minutesFromMidnight(now);
   const nowTop = topForMinutes(nowMinutes);
   const showNowLine = days.some((d) => isSameDay(d, now));
+
+  function getEventNavigationId(event: Event): string {
+    const recurringEvent = event as Event & { _recurringEventId?: string };
+    return recurringEvent._recurringEventId ?? event.id;
+  }
 
   return (
     <View style={styles.root}>
@@ -138,7 +147,7 @@ export default function TimeGrid({
               const bgColor = (e.event.color ?? e.calendar.color) + 'cc'; // with alpha
 
               return (
-                <View
+                <Pressable
                   key={e.event.id}
                   style={[
                     styles.eventBlock,
@@ -149,6 +158,12 @@ export default function TimeGrid({
                       borderLeftColor: e.event.color ?? e.calendar.color,
                     },
                   ]}
+                  onPress={() =>
+                    navigation.navigate('EventDetail', {
+                      eventId: getEventNavigationId(e.event),
+                    })
+                  }
+                  accessibilityLabel={e.event.title}
                 >
                   <Text style={styles.eventTitle} numberOfLines={2}>
                     {e.event.title}
@@ -158,7 +173,7 @@ export default function TimeGrid({
                       {formatTime(start)}
                     </Text>
                   )}
-                </View>
+                </Pressable>
               );
             })}
 

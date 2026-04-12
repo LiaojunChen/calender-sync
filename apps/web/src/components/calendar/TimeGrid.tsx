@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
-import type { Event, Calendar } from '@project-calendar/shared';
+import { eventSpansMultipleDays, type Event, type Calendar } from '@project-calendar/shared';
 import { isSameDay, isToday } from '@project-calendar/shared';
 import EventBlock, { HOUR_HEIGHT } from '@/components/event/EventBlock';
 import AllDayArea from './AllDayArea';
@@ -169,7 +169,7 @@ export default function TimeGrid({
     const allDay: Event[] = [];
     const timed: Event[] = [];
     for (const ev of events) {
-      if (ev.is_all_day) {
+      if (ev.is_all_day || eventSpansMultipleDays(ev)) {
         allDay.push(ev);
       } else {
         timed.push(ev);

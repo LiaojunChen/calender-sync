@@ -76,6 +76,40 @@ npm run build        # 构建
 npm start            # 启动生产服务器（apps/web/）
 ```
 
+### 部署到 GitHub Pages
+
+仓库已支持通过 GitHub Actions 自动部署 `apps/web` 到 GitHub Pages。默认行为如下：
+
+- 推送到 `main` 分支后自动重新构建并发布
+- 项目仓库默认部署到 `https://<用户名>.github.io/<仓库名>/`
+- 若仓库名是 `<用户名>.github.io`，则自动部署到站点根路径
+- 若未配置 Supabase 环境变量，网站仍可用演示模式打开
+
+#### 需要的仓库配置
+
+1. 进入 GitHub 仓库 → **Settings** → **Pages**
+2. 在 **Build and deployment** 中选择 **Source = GitHub Actions**
+3. 进入 **Settings** → **Secrets and variables** → **Actions**，添加以下 secrets：
+   ```env
+   NEXT_PUBLIC_SUPABASE_URL=https://你的项目ID.supabase.co
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=你的anon_key
+   ```
+4. 如果你使用自定义域名，或需要手动覆盖默认子路径，在 **Variables** 中添加：
+   ```env
+   PAGES_BASE_PATH_OVERRIDE=/你的子路径
+   ```
+   若仓库使用自定义域名并部署在根路径，可将 `PAGES_BASE_PATH_OVERRIDE` 设为 `/`。
+
+#### 部署流程
+
+```bash
+git add apps/web/next.config.ts .github/workflows/deploy-pages.yml README.md
+git commit -m "chore: deploy web to github pages"
+git push
+```
+
+首次推送后，打开 GitHub 的 **Actions** 页面，等待 `Deploy GitHub Pages` 工作流完成。
+
 ---
 
 ## Android APK

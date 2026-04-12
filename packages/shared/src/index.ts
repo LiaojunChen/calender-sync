@@ -13,3 +13,4 @@ export * from './sync';
 export * from './networkUtils';
 export * from './chineseCalendar';
 export * from './todoScheduling';
+export * from './calendarEventUtils';

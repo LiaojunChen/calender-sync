@@ -41,6 +41,7 @@ import {
   type Calendar,
 } from '@project-calendar/shared';
 import { createDemoCalendarData } from '../data/demoCalendarData';
+import { useAppSettings } from '../hooks/useAppSettings';
 import { useTheme } from '../hooks/useTheme';
 import { getSupabaseClientOrNull, isSupabaseConfigured } from '../lib/supabase';
 import TopBar from '../components/layout/TopBar';
@@ -95,9 +96,11 @@ function CustomDrawerContent(
   props: DrawerContentComponentProps & CustomDrawerContentExtraProps,
 ): React.JSX.Element {
   const { colors } = useTheme();
+  const { settings } = useAppSettings();
   const activeCalendarRoute = props.state.routes.find((route) => route.name === 'CalendarTab');
   const routeView =
-    (activeCalendarRoute?.params as DrawerParamList['CalendarTab'])?.initialView ?? 'month';
+    (activeCalendarRoute?.params as DrawerParamList['CalendarTab'])?.initialView
+    ?? settings.default_view;
   const [activeView, setActiveView] = useState<ViewType>(routeView);
   const calendarItems = useMemo(
     () => buildDrawerCalendarItems(props.calendars),
@@ -214,22 +217,6 @@ function CustomDrawerContent(
 
       <Pressable
         style={({ pressed }) => [
-          styles.addCalendar,
-          pressed && { backgroundColor: colors.bgSecondary },
-        ]}
-        onPress={() => {
-          /* TODO: navigate to create calendar screen */
-        }}
-      >
-        <Text style={[styles.addCalendarText, { color: colors.primary }]}>
-          + 新建日历
-        </Text>
-      </Pressable>
-
-      <View style={[styles.divider, { backgroundColor: colors.borderLight }]} />
-
-      <Pressable
-        style={({ pressed }) => [
           styles.settingsRow,
           pressed && { backgroundColor: colors.bgSecondary },
         ]}
@@ -278,6 +265,7 @@ const Drawer = createDrawerNavigator<DrawerParamList>();
 
 export default function DrawerNavigator(): React.JSX.Element {
   const { colors } = useTheme();
+  const { settings } = useAppSettings();
   const [calendars, setCalendars] = useState<Calendar[] | undefined>(undefined);
   const [loadingCalendars, setLoadingCalendars] = useState(isSupabaseConfigured);
   const [calendarError, setCalendarError] = useState<string | null>(null);
@@ -376,7 +364,12 @@ export default function DrawerNavigator(): React.JSX.Element {
       })}
     >
       <Drawer.Screen name="CalendarTab">
-        {() => <CalendarScreen calendarsOverride={calendars} />}
+        {() => (
+          <CalendarScreen
+            calendarsOverride={calendars}
+            defaultView={settings.default_view}
+          />
+        )}
       </Drawer.Screen>
       <Drawer.Screen name="TodoTab" component={TodoScreen} />
     </Drawer.Navigator>

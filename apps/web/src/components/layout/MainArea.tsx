@@ -53,6 +53,7 @@ import TodoList from '@/components/todo/TodoList';
 import type { EventFormData } from '@/components/event/EventForm';
 import type { TodoFormData } from '@/components/todo/TodoForm';
 import { generateDemoEvents, generateDemoTodos, DEMO_CALENDARS } from '@/lib/demo-events';
+import { prepareQuickTodoCreate } from '@/lib/quickTodoInput';
 import styles from './MainArea.module.css';
 
 // ============================================================
@@ -905,15 +906,62 @@ export default function MainArea() {
   // Handlers: Todo CRUD
   // -----------------------------------------------------------
 
-  const handleOpenNewTodo = useCallback(() => {
-    setEditingTodo(null);
-    setTodoFormOpen(true);
-  }, []);
-
   const handleEditTodo = useCallback((todo: Todo) => {
     setEditingTodo(todo);
     setTodoFormOpen(true);
   }, []);
+
+  const handleQuickCreateTodo = useCallback(
+    async (rawTitle: string) => {
+      const draft = prepareQuickTodoCreate(rawTitle, writableCalendars);
+      if (!draft) {
+        return false;
+      }
+
+      const now = new Date().toISOString();
+      const newTodo: Todo = {
+        id: nextDemoTodoId(),
+        user_id: state.userId ?? 'demo',
+        calendar_id: draft.calendarId,
+        title: draft.title,
+        description: null,
+        due_date: null,
+        due_time: null,
+        is_completed: false,
+        completed_at: null,
+        color: null,
+        deleted_at: null,
+        created_at: now,
+        updated_at: now,
+      };
+
+      if (isDemoMode) {
+        dispatch({ type: 'ADD_TODO', todo: newTodo });
+        return true;
+      }
+
+      const client = getSupabaseClient();
+      if (!client || !state.userId) {
+        return false;
+      }
+
+      const result = await apiCreateTodo(client, {
+        user_id: state.userId,
+        calendar_id: draft.calendarId,
+        title: draft.title,
+        due_date: null,
+        due_time: null,
+      });
+
+      if (!result.data) {
+        return false;
+      }
+
+      dispatch({ type: 'ADD_TODO', todo: result.data as unknown as Todo });
+      return true;
+    },
+    [dispatch, isDemoMode, state.userId, writableCalendars],
+  );
 
   const handleSaveTodo = useCallback(
     async (data: TodoFormData, todoId?: string) => {
@@ -1175,7 +1223,7 @@ export default function MainArea() {
           <TodoList
             todos={todos}
             calendars={calendars}
-            onNewTodo={handleOpenNewTodo}
+            onQuickCreateTodo={handleQuickCreateTodo}
             onEditTodo={handleEditTodo}
             onToggleTodo={handleToggleTodo}
             onDeleteTodo={handleDeleteTodo}

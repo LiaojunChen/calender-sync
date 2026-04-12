@@ -3,7 +3,9 @@
 // ============================================================
 
 import React, { useEffect, useRef } from 'react';
-import { ScrollView, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import type { StackNavigationProp } from '@react-navigation/stack';
 import { useTheme } from '../../hooks/useTheme';
 import TimeGrid, {
   HOUR_HEIGHT,
@@ -11,7 +13,13 @@ import TimeGrid, {
   type TimeGridEvent,
 } from './TimeGrid';
 import type { Calendar, Event } from '@project-calendar/shared';
-import { isSameDay, formatDateCN } from '@project-calendar/shared';
+import {
+  eventIntersectsDay,
+  eventSpansMultipleDays,
+  formatDateCN,
+  isSameDay,
+} from '@project-calendar/shared';
+import type { RootStackParamList } from '../../navigation/AppNavigator';
 
 // ---------------------------------------------------------------------------
 // Props
@@ -37,6 +45,7 @@ export default function DayView({
   onRefresh,
 }: DayViewProps): React.JSX.Element {
   const { colors } = useTheme();
+  const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
   const scrollRef = useRef<ScrollView>(null);
   const now = new Date();
 
@@ -63,19 +72,27 @@ export default function DayView({
       if (e.deleted_at) return false;
       const cal = calendarMap.get(e.calendar_id);
       if (!cal || !cal.is_visible) return false;
-      const start = new Date(e.start_time);
-      return isSameDay(start, currentDate);
+      return eventIntersectsDay(e, currentDate);
     })
     .map((e) => ({
       event: e,
       calendar: calendarMap.get(e.calendar_id)!,
     }));
 
-  // All-day events
-  const allDayEvents = gridEvents.filter((e) => e.event.is_all_day);
-  const timedGridEvents = gridEvents.filter((e) => !e.event.is_all_day);
+  // All-day and cross-day events belong in the top strip.
+  const allDayEvents = gridEvents.filter(
+    (entry) => entry.event.is_all_day || eventSpansMultipleDays(entry.event),
+  );
+  const timedGridEvents = gridEvents.filter(
+    (entry) => !entry.event.is_all_day && !eventSpansMultipleDays(entry.event),
+  );
 
   const days = [currentDate];
+
+  function getEventNavigationId(event: Event): string {
+    const recurringEvent = event as Event & { _recurringEventId?: string };
+    return recurringEvent._recurringEventId ?? event.id;
+  }
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -97,15 +114,21 @@ export default function DayView({
       {allDayEvents.length > 0 && (
         <View style={[styles.allDaySection, { borderBottomColor: colors.border }]}>
           <Text style={[styles.allDayLabel, { color: colors.textSecondary }]}>
-            全天
+            全天 / 跨天
           </Text>
           {allDayEvents.map((e) => (
-            <View
+            <Pressable
               key={e.event.id}
               style={[
                 styles.allDayEvent,
                 { backgroundColor: (e.event.color ?? e.calendar.color) + '33' },
               ]}
+              onPress={() =>
+                navigation.navigate('EventDetail', {
+                  eventId: getEventNavigationId(e.event),
+                })
+              }
+              accessibilityLabel={e.event.title}
             >
               <View
                 style={[
@@ -119,7 +142,7 @@ export default function DayView({
               >
                 {e.event.title}
               </Text>
-            </View>
+            </Pressable>
           ))}
         </View>
       )}

@@ -16,6 +16,7 @@ import {
 } from 'react-native';
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
+import { useAppSettings } from '../hooks/useAppSettings';
 import { useTheme } from '../hooks/useTheme';
 import type { RootStackParamList } from '../navigation/AppNavigator';
 import {
@@ -29,7 +30,6 @@ import {
 } from '@project-calendar/shared';
 import type { CalendarRow, EventInsert, EventUpdate } from '@project-calendar/shared';
 import { getSupabaseClientOrNull, SUPABASE_CONFIG_ERROR } from '../lib/supabase';
-import { DEFAULT_REMINDER_OFFSETS } from '../notifications/scheduler';
 import { syncWidgetData } from '../widget/widgetSync';
 import { buildEventInsertPayload } from '../lib/formPayloads';
 
@@ -115,9 +115,9 @@ function defaultStartIso(): string {
   return d.toISOString();
 }
 
-function defaultEndIso(startIso: string): string {
+function defaultEndIso(startIso: string, durationMinutes: number): string {
   const d = new Date(startIso);
-  d.setHours(d.getHours() + 1);
+  d.setMinutes(d.getMinutes() + durationMinutes);
   return d.toISOString();
 }
 
@@ -126,6 +126,7 @@ function defaultEndIso(startIso: string): string {
 // ---------------------------------------------------------------------------
 
 export default function EventFormScreen(): React.JSX.Element {
+  const { settings } = useAppSettings();
   const { colors } = useTheme();
   const navigation = useNavigation<EventFormNavProp>();
   const route = useRoute<EventFormRouteProp>();
@@ -134,25 +135,21 @@ export default function EventFormScreen(): React.JSX.Element {
   const supabase = getSupabaseClientOrNull();
 
   // ---- form state ----
+  const initialStartIso = defaultStartIso();
+  const initialEndIso = defaultEndIso(initialStartIso, settings.default_event_duration);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [location, setLocation] = useState('');
   const [isAllDay, setIsAllDay] = useState(false);
-  const [startDateStr, setStartDateStr] = useState(() => formatDateStr(defaultStartIso()));
-  const [startTimeStr, setStartTimeStr] = useState(() => formatTimeStr(defaultStartIso()));
-  const [endDateStr, setEndDateStr] = useState(() => {
-    const start = defaultStartIso();
-    return formatDateStr(defaultEndIso(start));
-  });
-  const [endTimeStr, setEndTimeStr] = useState(() => {
-    const start = defaultStartIso();
-    return formatTimeStr(defaultEndIso(start));
-  });
+  const [startDateStr, setStartDateStr] = useState(() => formatDateStr(initialStartIso));
+  const [startTimeStr, setStartTimeStr] = useState(() => formatTimeStr(initialStartIso));
+  const [endDateStr, setEndDateStr] = useState(() => formatDateStr(initialEndIso));
+  const [endTimeStr, setEndTimeStr] = useState(() => formatTimeStr(initialEndIso));
   const [calendarId, setCalendarId] = useState('');
   const [color, setColor] = useState<string | null>(null);
   // New events start with default reminder offsets; editing overwrites from DB
   const [reminderOffsets, setReminderOffsets] = useState<number[]>(
-    isEditing ? [] : [...DEFAULT_REMINDER_OFFSETS],
+    isEditing ? [] : [...settings.default_reminder_offsets],
   );
 
   // ---- meta state ----

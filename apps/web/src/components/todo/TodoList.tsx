@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useState, useCallback, useEffect } from 'react';
+import React, { useMemo, useState, useCallback, useEffect, useRef } from 'react';
 import type { Todo, Calendar } from '@project-calendar/shared';
 import {
   filterTodosByDateBucket,
@@ -13,7 +13,7 @@ import styles from './TodoList.module.css';
 interface TodoListProps {
   todos: Todo[];
   calendars: Calendar[];
-  onNewTodo: () => void;
+  onQuickCreateTodo: (title: string) => Promise<boolean> | boolean;
   onEditTodo: (todo: Todo) => void;
   onToggleTodo: (todo: Todo) => void;
   onDeleteTodo: (todoId: string) => void;
@@ -54,7 +54,7 @@ function getTodayStr(): string {
 export default function TodoList({
   todos,
   calendars,
-  onNewTodo,
+  onQuickCreateTodo,
   onEditTodo,
   onToggleTodo,
   onDeleteTodo,
@@ -63,6 +63,9 @@ export default function TodoList({
   const [filter, setFilter] = useState<TodoFilterType>('all');
   const [showCompleted, setShowCompleted] = useState(false);
   const [pinnedIds, setPinnedIds] = useState<Set<string>>(loadPinnedIds);
+  const [quickCreateTitle, setQuickCreateTitle] = useState('');
+  const [isQuickCreating, setIsQuickCreating] = useState(false);
+  const quickCreateInputRef = useRef<HTMLInputElement>(null);
 
   // Keep localStorage in sync whenever pinnedIds changes
   useEffect(() => {
@@ -133,6 +136,65 @@ export default function TodoList({
   const pinnedTodos = sortedIncomplete.filter((t) => pinnedIds.has(t.id));
   const unpinnedTodos = sortedIncomplete.filter((t) => !pinnedIds.has(t.id));
   const hasPinned = pinnedTodos.length > 0;
+  const isEmpty = sortedIncomplete.length === 0 && completedTodos.length === 0;
+
+  const handleQuickCreate = useCallback(async () => {
+    if (isQuickCreating) {
+      return;
+    }
+
+    const title = quickCreateTitle.trim();
+    if (!title) {
+      return;
+    }
+
+    setIsQuickCreating(true);
+    try {
+      const created = await onQuickCreateTodo(title);
+      if (!created) {
+        return;
+      }
+
+      setQuickCreateTitle('');
+      requestAnimationFrame(() => {
+        quickCreateInputRef.current?.focus();
+      });
+    } finally {
+      setIsQuickCreating(false);
+    }
+  }, [isQuickCreating, onQuickCreateTodo, quickCreateTitle]);
+
+  const handleQuickCreateKeyDown = useCallback(
+    async (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (e.key !== 'Enter' || e.nativeEvent.isComposing) {
+        return;
+      }
+
+      e.preventDefault();
+      await handleQuickCreate();
+    },
+    [handleQuickCreate],
+  );
+
+  const renderQuickCreateInput = (isEmptyState = false) => (
+    <div
+      className={`${styles.quickCreateWrap} ${isEmptyState ? styles.quickCreateWrapEmpty : ''} ${isQuickCreating ? styles.quickCreateWrapBusy : ''}`}
+    >
+      <span className={styles.quickCreateIcon} aria-hidden="true">+</span>
+      <input
+        ref={quickCreateInputRef}
+        className={styles.quickCreateInput}
+        type="text"
+        placeholder="输入待办标题，回车创建"
+        value={quickCreateTitle}
+        onChange={(e) => setQuickCreateTitle(e.target.value)}
+        onKeyDown={handleQuickCreateKeyDown}
+        disabled={isQuickCreating}
+        autoFocus={isEmptyState}
+      />
+      <span className={styles.quickCreateHint}>{isQuickCreating ? '创建中' : '回车'}</span>
+    </div>
+  );
 
   return (
     <div className={styles.panel}>
@@ -144,11 +206,8 @@ export default function TodoList({
         </button>
       </div>
 
-      {/* New todo button */}
-      <button type="button" className={styles.newBtn} onClick={onNewTodo}>
-        <span className={styles.newBtnPlus}>+</span>
-        新建待办
-      </button>
+      {/* Quick create */}
+      {!isEmpty && renderQuickCreateInput()}
 
       {/* Filter tabs */}
       <div className={styles.filterTabs}>
@@ -172,20 +231,14 @@ export default function TodoList({
 
       {/* Incomplete todos */}
       <div className={styles.list}>
-        {sortedIncomplete.length === 0 && completedTodos.length === 0 ? (
+        {isEmpty ? (
           <div className={styles.emptyState}>
             <svg className={styles.emptyIcon} viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="1.5">
               <rect x="6" y="6" width="36" height="36" rx="4" strokeDasharray="4 2" />
               <path d="M16 24l6 6 10-10" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
             <span>暂无待办事项</span>
-            <button
-              type="button"
-              className={styles.emptyNewBtn}
-              onClick={onNewTodo}
-            >
-              新建待办
-            </button>
+            {renderQuickCreateInput(true)}
           </div>
         ) : (
           <>

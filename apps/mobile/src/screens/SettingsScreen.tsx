@@ -2,8 +2,9 @@
 // SettingsScreen – full settings (Task 15)
 // ============================================================
 
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
+  ActivityIndicator,
   Alert,
   Pressable,
   ScrollView,
@@ -11,10 +12,9 @@ import {
   Text,
   View,
 } from 'react-native';
+import { useAppSettings } from '../hooks/useAppSettings';
 import { useTheme } from '../hooks/useTheme';
 import { useAuth } from '../hooks/useAuth';
-import { requireSupabaseClient } from '../lib/supabase';
-import { updateUserSettings } from '@project-calendar/shared';
 import type { ThemeMode } from '../components/common/ThemeProvider';
 
 // ============================================================
@@ -135,15 +135,26 @@ function RadioGroup<T extends string | number>({
 
 export default function SettingsScreen(): React.JSX.Element {
   const { colors, mode, setMode } = useTheme();
+  const { settings, isLoaded, saveSettings } = useAppSettings();
   const { signOut, status, isDemoMode } = useAuth();
 
   // Settings state (defaults)
-  const [defaultView, setDefaultView] = useState<ViewType>('week');
-  const [weekStartDay, setWeekStartDay] = useState<WeekStart>('monday');
-  const [defaultDuration, setDefaultDuration] = useState<number>(60);
-  const [reminderOffsets, setReminderOffsets] = useState<number[]>([10, 1440]);
+  const [defaultView, setDefaultView] = useState<ViewType>(settings.default_view);
+  const [weekStartDay, setWeekStartDay] = useState<WeekStart>(settings.week_start_day);
+  const [defaultDuration, setDefaultDuration] = useState<number>(settings.default_event_duration);
+  const [reminderOffsets, setReminderOffsets] = useState<number[]>(settings.default_reminder_offsets);
   const [saving, setSaving] = useState(false);
   const [savedMsg, setSavedMsg] = useState('');
+
+  useEffect(() => {
+    if (!isLoaded) {
+      return;
+    }
+    setDefaultView(settings.default_view);
+    setWeekStartDay(settings.week_start_day);
+    setDefaultDuration(settings.default_event_duration);
+    setReminderOffsets(settings.default_reminder_offsets);
+  }, [isLoaded, settings]);
 
   const handleAddReminder = useCallback((value: number) => {
     setReminderOffsets((prev) => {
@@ -163,26 +174,43 @@ export default function SettingsScreen(): React.JSX.Element {
     // Apply theme immediately
     setMode(mode as ThemeMode);
 
-    if (status === 'authenticated' && !isDemoMode) {
-      try {
-        await updateUserSettings(requireSupabaseClient(), {
-          default_view: defaultView,
-          week_start_day: weekStartDay,
-          default_event_duration: defaultDuration,
-          theme: mode,
-          default_reminder_offsets: reminderOffsets,
-        });
-        setSavedMsg('已保存');
-      } catch (e) {
-        Alert.alert('保存失败', '请稍后重试');
-      }
-    } else {
-      setSavedMsg('已保存（本地）');
+    const result = await saveSettings({
+      default_view: defaultView,
+      week_start_day: weekStartDay,
+      default_event_duration: defaultDuration,
+      theme: mode,
+      default_reminder_offsets: reminderOffsets,
+    });
+
+    if (!result.ok) {
+      Alert.alert('保存失败', result.error ?? '请稍后重试');
+      setSaving(false);
+      return;
     }
+
+    setSavedMsg(status === 'authenticated' && !isDemoMode ? '已保存' : '已保存（本地）');
 
     setSaving(false);
     setTimeout(() => setSavedMsg(''), 2000);
-  }, [defaultView, weekStartDay, defaultDuration, mode, reminderOffsets, status, isDemoMode, setMode]);
+  }, [
+    defaultDuration,
+    defaultView,
+    isDemoMode,
+    mode,
+    reminderOffsets,
+    saveSettings,
+    setMode,
+    status,
+    weekStartDay,
+  ]);
+
+  if (!isLoaded) {
+    return (
+      <View style={[styles.loadingState, { backgroundColor: colors.background }]}>
+        <ActivityIndicator color={colors.primary} />
+      </View>
+    );
+  }
 
   return (
     <ScrollView
@@ -308,6 +336,11 @@ export default function SettingsScreen(): React.JSX.Element {
 // ============================================================
 
 const styles = StyleSheet.create({
+  loadingState: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   container: {
     padding: 20,
     paddingBottom: 40,

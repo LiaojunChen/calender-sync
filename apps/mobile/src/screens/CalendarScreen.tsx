@@ -31,6 +31,7 @@ import {
 } from '@react-navigation/native';
 import type { DrawerNavigationProp } from '@react-navigation/drawer';
 import { useTheme } from '../hooks/useTheme';
+import { useAppSettings, weekStartDayToIndex } from '../hooks/useAppSettings';
 import { useNetworkSync } from '../hooks/useNetworkSync';
 import MonthView from '../components/calendar/MonthView';
 import WeekView from '../components/calendar/WeekView';
@@ -83,12 +84,13 @@ function navigateDate(
   date: Date,
   view: ViewType,
   direction: -1 | 1,
+  weekStartDayIndex: 0 | 1,
 ): Date {
   switch (view) {
     case 'month':
       return addMonths(date, direction);
     case 'week': {
-      const ws = startOfWeek(date, 1);
+      const ws = startOfWeek(date, weekStartDayIndex);
       return addDays(ws, direction * 7);
     }
     case 'day':
@@ -107,13 +109,18 @@ type CalendarNavProp = DrawerNavigationProp<DrawerParamList, 'CalendarTab'>;
 
 interface CalendarScreenProps {
   calendarsOverride?: Calendar[];
+  defaultView?: ViewType;
 }
 
 function buildHeaderTitle(date: Date): string {
   return `${date.getFullYear()}年${date.getMonth() + 1}月`;
 }
 
-function getViewRange(view: ViewType, currentDate: Date): { start: Date; end: Date } {
+function getViewRange(
+  view: ViewType,
+  currentDate: Date,
+  weekStartDayIndex: 0 | 1,
+): { start: Date; end: Date } {
   switch (view) {
     case 'day': {
       const start = new Date(currentDate);
@@ -125,9 +132,9 @@ function getViewRange(view: ViewType, currentDate: Date): { start: Date; end: Da
       return { start, end };
     }
     case 'week': {
-      const weekStart = startOfWeek(currentDate, 1);
+      const weekStart = startOfWeek(currentDate, weekStartDayIndex);
       const start = addDays(weekStart, -30);
-      const weekEnd = endOfWeek(currentDate, 1);
+      const weekEnd = endOfWeek(currentDate, weekStartDayIndex);
       const end = addDays(weekEnd, 30);
       return { start, end };
     }
@@ -160,11 +167,14 @@ function mapExceptionRow(row: EventExceptionRow): CalendarEventException {
 
 export default function CalendarScreen({
   calendarsOverride,
+  defaultView = 'month',
 }: CalendarScreenProps): React.JSX.Element {
   const { colors } = useTheme();
+  const { settings } = useAppSettings();
   const navigation = useNavigation<CalendarNavProp>();
   const route = useRoute<CalendarRouteProp>();
-  const requestedView = route.params?.initialView ?? 'month';
+  const requestedView = route.params?.initialView ?? defaultView;
+  const weekStartDayIndex = weekStartDayToIndex(settings.week_start_day);
 
   const [currentView, setCurrentView] = useState<ViewType>(requestedView);
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
@@ -181,10 +191,22 @@ export default function CalendarScreen({
   const effectiveCalendars = calendarsOverride ?? calendars;
   const [recurrenceRules, setRecurrenceRules] = useState<Record<string, string>>({});
   const [recurrenceExceptions, setRecurrenceExceptions] = useState<CalendarEventException[]>([]);
+  const currentViewRef = useRef<ViewType>(currentView);
+  const weekStartDayIndexRef = useRef<0 | 1>(weekStartDayIndex);
+
+  useEffect(() => {
+    currentViewRef.current = currentView;
+  }, [currentView]);
+
+  useEffect(() => {
+    weekStartDayIndexRef.current = weekStartDayIndex;
+  }, [weekStartDayIndex]);
 
   useEffect(() => {
     if (route.params?.initialView) {
       setCurrentView(route.params.initialView);
+    } else if (!route.params) {
+      setCurrentView(defaultView);
     }
     if (route.params?.focusDate === 'today') {
       setCurrentDate(new Date());
@@ -194,7 +216,7 @@ export default function CalendarScreen({
         setCurrentDate(nextDate);
       }
     }
-  }, [route.params?.focusDate, route.params?.initialView]);
+  }, [defaultView, route.params?.focusDate, route.params?.initialView]);
 
   useEffect(() => {
     const nextTitle = buildHeaderTitle(currentDate);
@@ -270,8 +292,8 @@ export default function CalendarScreen({
   }, [events]);
 
   const viewRange = useMemo(
-    () => getViewRange(currentView, currentDate),
-    [currentView, currentDate],
+    () => getViewRange(currentView, currentDate, weekStartDayIndex),
+    [currentView, currentDate, weekStartDayIndex],
   );
   const displayEvents = useMemo(() => {
     const enrichedEvents: EventWithRrule[] = events.map((event) => ({
@@ -367,7 +389,12 @@ export default function CalendarScreen({
         ) {
           const direction: -1 | 1 = dx < 0 ? 1 : -1;
           setCurrentDate((prev) =>
-            navigateDate(prev, currentView, direction),
+            navigateDate(
+              prev,
+              currentViewRef.current,
+              direction,
+              weekStartDayIndexRef.current,
+            ),
           );
         }
         swipeStartRef.current = null;
@@ -391,6 +418,7 @@ export default function CalendarScreen({
             refreshing={refreshing}
             onRefresh={handleRefresh}
             onDaySelect={handleDaySelect}
+            weekStartDay={settings.week_start_day}
           />
         );
       case 'week':
@@ -402,6 +430,7 @@ export default function CalendarScreen({
             refreshing={refreshing}
             onRefresh={handleRefresh}
             onDayPress={handleDaySelect}
+            weekStartDay={settings.week_start_day}
           />
         );
       case 'day':

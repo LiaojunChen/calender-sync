@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
+import { useAppSettings } from '../hooks/useAppSettings';
 import { useTheme } from '../hooks/useTheme';
 import type { RootStackParamList } from '../navigation/AppNavigator';
 import {
@@ -28,7 +29,6 @@ import {
 } from '@project-calendar/shared';
 import type { CalendarRow, TodoInsert, TodoUpdate } from '@project-calendar/shared';
 import { getSupabaseClientOrNull, SUPABASE_CONFIG_ERROR } from '../lib/supabase';
-import { DEFAULT_REMINDER_OFFSETS } from '../notifications/scheduler';
 import { syncWidgetData } from '../widget/widgetSync';
 import { buildTodoInsertPayload } from '../lib/formPayloads';
 
@@ -56,6 +56,7 @@ const REMINDER_OPTIONS: { label: string; value: number }[] = [
 // ---------------------------------------------------------------------------
 
 export default function TodoFormScreen(): React.JSX.Element {
+  const { settings } = useAppSettings();
   const { colors } = useTheme();
   const navigation = useNavigation<TodoFormNavProp>();
   const route = useRoute<TodoFormRouteProp>();
@@ -71,7 +72,7 @@ export default function TodoFormScreen(): React.JSX.Element {
   const [calendarId, setCalendarId] = useState('');
   // New todos start with default reminder offsets; editing overwrites from DB
   const [reminderOffsets, setReminderOffsets] = useState<number[]>(
-    isEditing ? [] : [...DEFAULT_REMINDER_OFFSETS],
+    isEditing ? [] : [...settings.default_reminder_offsets],
   );
 
   // ---- meta state ----

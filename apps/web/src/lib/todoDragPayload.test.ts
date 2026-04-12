@@ -23,7 +23,7 @@ function makeDataTransfer({
     },
   };
 
-  return fake as DataTransfer;
+  return fake as unknown as DataTransfer;
 }
 
 describe('todoDragPayload', () => {

@@ -15,6 +15,8 @@ import EventItem from './EventItem';
 import type { Calendar, Event, Todo } from '@project-calendar/shared';
 import {
   addDays,
+  eventIntersectsDay,
+  eventSpansMultipleDays,
   formatDateCN,
   isSameDay,
   isToday,
@@ -81,8 +83,7 @@ export default function AgendaView({
         if (e.deleted_at) continue;
         const cal = calendarMap.get(e.calendar_id);
         if (!cal || !cal.is_visible) continue;
-        const start = new Date(e.start_time);
-        if (!isSameDay(start, day)) continue;
+        if (!eventIntersectsDay(e, day)) continue;
         items.push({ item: e, color: e.color ?? cal.color });
       }
 
@@ -99,9 +100,13 @@ export default function AgendaView({
       // Sort: all-day first, then by time
       items.sort((a, b) => {
         const aIsAllDay =
-          'is_all_day' in a.item ? a.item.is_all_day : !('due_time' in a.item && a.item.due_time);
+          'is_all_day' in a.item
+            ? a.item.is_all_day || eventSpansMultipleDays(a.item)
+            : !('due_time' in a.item && a.item.due_time);
         const bIsAllDay =
-          'is_all_day' in b.item ? b.item.is_all_day : !('due_time' in b.item && b.item.due_time);
+          'is_all_day' in b.item
+            ? b.item.is_all_day || eventSpansMultipleDays(b.item)
+            : !('due_time' in b.item && b.item.due_time);
         if (aIsAllDay && !bIsAllDay) return -1;
         if (!aIsAllDay && bIsAllDay) return 1;
 

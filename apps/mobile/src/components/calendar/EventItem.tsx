@@ -3,10 +3,13 @@
 // ============================================================
 
 import React from 'react';
+import { useNavigation } from '@react-navigation/native';
+import type { StackNavigationProp } from '@react-navigation/stack';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTheme } from '../../hooks/useTheme';
 import type { Event, Todo } from '@project-calendar/shared';
-import { formatTime } from '@project-calendar/shared';
+import { eventSpansMultipleDays, formatTime } from '@project-calendar/shared';
+import type { RootStackParamList } from '../../navigation/AppNavigator';
 
 // ---------------------------------------------------------------------------
 // Props
@@ -24,6 +27,11 @@ function isTodo(item: Event | Todo): item is Todo {
   return 'is_completed' in item;
 }
 
+function getEventNavigationId(event: Event): string {
+  const recurringEvent = event as Event & { _recurringEventId?: string };
+  return recurringEvent._recurringEventId ?? event.id;
+}
+
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
@@ -34,6 +42,7 @@ export default function EventItem({
   onPress,
 }: EventItemProps): React.JSX.Element {
   const { colors } = useTheme();
+  const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
 
   let timeText = '';
   if (isTodo(item)) {
@@ -48,12 +57,25 @@ export default function EventItem({
   } else {
     if (item.is_all_day) {
       timeText = '全天';
+    } else if (eventSpansMultipleDays(item)) {
+      timeText = '跨天';
     } else {
       timeText = formatTime(new Date(item.start_time));
     }
   }
 
   const isCompleted = isTodo(item) && item.is_completed;
+  const handlePress = onPress
+    ?? (() => {
+      if (isTodo(item)) {
+        navigation.navigate('TodoForm', { todoId: item.id });
+        return;
+      }
+
+      navigation.navigate('EventDetail', {
+        eventId: getEventNavigationId(item),
+      });
+    });
 
   return (
     <Pressable
@@ -61,7 +83,7 @@ export default function EventItem({
         styles.row,
         { backgroundColor: pressed ? colors.bgSecondary : 'transparent' },
       ]}
-      onPress={onPress}
+      onPress={handlePress}
       accessibilityLabel={item.title}
     >
       {/* Left accent border */}

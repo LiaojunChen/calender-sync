@@ -129,7 +129,7 @@ export default function EventDetailScreen(): React.JSX.Element {
     }
     Alert.alert(
       '删除日程',
-      '确定要删除此日程吗？此操作可以在删除后5秒内撤销。',
+      '确定要删除此日程吗？删除后将从日历中移除。',
       [
         { text: '取消', style: 'cancel' },
         {

@@ -19,19 +19,26 @@ import EventItem from './EventItem';
 import type { Calendar, Event, Todo } from '@project-calendar/shared';
 import {
   addDays,
+  eventIntersectsDay,
+  eventSpansMultipleDays,
   formatDateCN,
   isSameDay,
   isToday,
   startOfMonth,
   startOfWeek,
   toISODateString,
+  type UserSettings,
 } from '@project-calendar/shared';
+import { weekStartDayToIndex } from '../../hooks/useAppSettings';
 
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
 
-const DAY_LABELS = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
+const DAY_LABELS: Record<UserSettings['week_start_day'], string[]> = {
+  monday: ['周一', '周二', '周三', '周四', '周五', '周六', '周日'],
+  sunday: ['周日', '周一', '周二', '周三', '周四', '周五', '周六'],
+};
 const CELL_HEIGHT = 52; // px per calendar row
 const COLLAPSED_ROWS = 1;
 
@@ -47,15 +54,16 @@ interface MonthViewProps {
   refreshing: boolean;
   onRefresh: () => void;
   onDaySelect: (date: Date) => void;
+  weekStartDay: UserSettings['week_start_day'];
 }
 
 // ---------------------------------------------------------------------------
 // Helper: build a 6-row calendar grid (Mon-first)
 // ---------------------------------------------------------------------------
 
-function buildMonthGrid(date: Date): Date[][] {
+function buildMonthGrid(date: Date, weekStartDayIndex: 0 | 1): Date[][] {
   const monthStart = startOfMonth(date);
-  const gridStart = startOfWeek(monthStart, 1); // Monday
+  const gridStart = startOfWeek(monthStart, weekStartDayIndex);
   const grid: Date[][] = [];
   for (let row = 0; row < 6; row++) {
     const week: Date[] = [];
@@ -87,12 +95,17 @@ export default function MonthView({
   refreshing,
   onRefresh,
   onDaySelect,
+  weekStartDay,
 }: MonthViewProps): React.JSX.Element {
   const { colors } = useTheme();
   const [expanded, setExpanded] = useState(false);
+  const weekStartDayIndex = weekStartDayToIndex(weekStartDay);
 
   // Animated grid height
-  const grid = useMemo(() => buildMonthGrid(currentDate), [currentDate]);
+  const grid = useMemo(
+    () => buildMonthGrid(currentDate, weekStartDayIndex),
+    [currentDate, weekStartDayIndex],
+  );
   const selectedRow = useMemo(
     () => findRowForDate(grid, currentDate),
     [grid, currentDate],
@@ -130,15 +143,19 @@ export default function MonthView({
   // Map date string -> array of calendar colors with events
   const eventColorsByDay = useMemo(() => {
     const map = new Map<string, string[]>();
+    const visibleDates = grid.flat();
     for (const e of events) {
       if (e.deleted_at) continue;
       const cal = calendarMap.get(e.calendar_id);
       if (!cal || !cal.is_visible) continue;
-      const key = toISODateString(new Date(e.start_time));
-      const existing = map.get(key) ?? [];
       const color = e.color ?? cal.color;
-      if (!existing.includes(color)) existing.push(color);
-      map.set(key, existing);
+      for (const date of visibleDates) {
+        if (!eventIntersectsDay(e, date)) continue;
+        const key = toISODateString(date);
+        const existing = map.get(key) ?? [];
+        if (!existing.includes(color)) existing.push(color);
+        map.set(key, existing);
+      }
     }
     for (const t of todos) {
       if (t.deleted_at || !t.due_date) continue;
@@ -151,7 +168,7 @@ export default function MonthView({
       map.set(key, existing);
     }
     return map;
-  }, [events, todos, calendarMap]);
+  }, [events, todos, calendarMap, grid]);
 
   // Events and todos for selected day (for the list below)
   const selectedDayKey = toISODateString(currentDate);
@@ -162,8 +179,7 @@ export default function MonthView({
       if (e.deleted_at) continue;
       const cal = calendarMap.get(e.calendar_id);
       if (!cal || !cal.is_visible) continue;
-      const start = new Date(e.start_time);
-      if (!isSameDay(start, currentDate)) continue;
+      if (!eventIntersectsDay(e, currentDate)) continue;
       items.push({ item: e, color: e.color ?? cal.color });
     }
 
@@ -176,6 +192,13 @@ export default function MonthView({
     }
 
     items.sort((a, b) => {
+      const aIsPinned =
+        'start_time' in a.item && (a.item.is_all_day || eventSpansMultipleDays(a.item));
+      const bIsPinned =
+        'start_time' in b.item && (b.item.is_all_day || eventSpansMultipleDays(b.item));
+      if (aIsPinned && !bIsPinned) return -1;
+      if (!aIsPinned && bIsPinned) return 1;
+
       const aTime = 'start_time' in a.item ? a.item.start_time : (a.item.due_time ?? '');
       const bTime = 'start_time' in b.item ? b.item.start_time : (b.item.due_time ?? '');
       return aTime.localeCompare(bTime);
@@ -225,7 +248,7 @@ export default function MonthView({
 
         {/* Weekday header */}
         <View style={styles.weekdayHeader}>
-          {DAY_LABELS.map((label) => (
+          {DAY_LABELS[weekStartDay].map((label) => (
             <Text
               key={label}
               style={[styles.weekdayLabel, { color: colors.textSecondary }]}

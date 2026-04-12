@@ -10,19 +10,27 @@ import TimeGrid, {
   minutesFromMidnight,
   type TimeGridEvent,
 } from './TimeGrid';
+import WeekAllDayArea from './WeekAllDayArea';
 import type { Calendar, Event } from '@project-calendar/shared';
 import {
+  eventIntersectsDay,
+  eventSpansMultipleDays,
   isSameDay,
   isToday,
   startOfWeek,
   addDays,
+  type UserSettings,
 } from '@project-calendar/shared';
+import { weekStartDayToIndex } from '../../hooks/useAppSettings';
 
 // ---------------------------------------------------------------------------
 // Chinese day-of-week labels (Mon-first)
 // ---------------------------------------------------------------------------
 
-const DAY_LABELS = ['一', '二', '三', '四', '五', '六', '日'];
+const DAY_LABELS: Record<UserSettings['week_start_day'], string[]> = {
+  monday: ['一', '二', '三', '四', '五', '六', '日'],
+  sunday: ['日', '一', '二', '三', '四', '五', '六'],
+};
 
 // ---------------------------------------------------------------------------
 // Props
@@ -35,6 +43,7 @@ interface WeekViewProps {
   refreshing: boolean;
   onRefresh: () => void;
   onDayPress?: (date: Date) => void;
+  weekStartDay: UserSettings['week_start_day'];
 }
 
 // ---------------------------------------------------------------------------
@@ -48,13 +57,15 @@ export default function WeekView({
   refreshing,
   onRefresh,
   onDayPress,
+  weekStartDay,
 }: WeekViewProps): React.JSX.Element {
   const { colors } = useTheme();
   const scrollRef = useRef<ScrollView>(null);
   const now = new Date();
+  const weekStartDayIndex = weekStartDayToIndex(weekStartDay);
 
   // Build the 7 days of the current week (Mon–Sun)
-  const weekStart = startOfWeek(currentDate, 1);
+  const weekStart = startOfWeek(currentDate, weekStartDayIndex);
   const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
 
   // Scroll to current time on mount / week change
@@ -76,7 +87,7 @@ export default function WeekView({
   // Filter visible timed events for this week
   const gridEvents: TimeGridEvent[] = events
     .filter((e) => {
-      if (e.deleted_at || e.is_all_day) return false;
+      if (e.deleted_at || e.is_all_day || eventSpansMultipleDays(e)) return false;
       const cal = calendarMap.get(e.calendar_id);
       if (!cal || !cal.is_visible) return false;
       const start = new Date(e.start_time);
@@ -86,6 +97,14 @@ export default function WeekView({
       event: e,
       calendar: calendarMap.get(e.calendar_id)!,
     }));
+
+  const allDayEvents = events.filter((event) => {
+    if (event.deleted_at) return false;
+    if (!event.is_all_day && !eventSpansMultipleDays(event)) return false;
+    const calendar = calendarMap.get(event.calendar_id);
+    if (!calendar || !calendar.is_visible) return false;
+    return days.some((day) => eventIntersectsDay(event, day));
+  });
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -105,7 +124,7 @@ export default function WeekView({
               <Text
                 style={[styles.weekdayLabel, { color: colors.textSecondary }]}
               >
-                {DAY_LABELS[idx]}
+                {DAY_LABELS[weekStartDay][idx]}
               </Text>
               <View
                 style={[
@@ -128,6 +147,12 @@ export default function WeekView({
           );
         })}
       </View>
+
+      <WeekAllDayArea
+        days={days}
+        events={allDayEvents}
+        calendars={calendars}
+      />
 
       {/* Timed grid */}
       <ScrollView
